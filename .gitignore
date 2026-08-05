@@ -11,3 +11,8 @@ out/
 venv/
 *.FCStd
 .DS_Store
+
+# Godot editor cache / per-machine import artifacts
+godot_test/.godot/
+godot_test/**/*.import
+godot_test/**/*.uid

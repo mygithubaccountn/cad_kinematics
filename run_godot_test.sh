@@ -38,7 +38,9 @@ for c in \
   "$(command -v godot4 2>/dev/null || true)" \
   "$(command -v godot 2>/dev/null || true)" \
   "/Applications/Godot.app/Contents/MacOS/Godot" \
-  "/Applications/Godot_4.app/Contents/MacOS/Godot"
+  "/Applications/Godot_4.app/Contents/MacOS/Godot" \
+  "$HOME/Desktop/Godot_mono.app/Contents/MacOS/Godot" \
+  "$HOME/Downloads/Godot_mono.app/Contents/MacOS/Godot"
 do
   if [[ -n "$c" && -x "$c" ]]; then
     GODOT="$c"
@@ -48,8 +50,14 @@ done
 
 if [[ -z "$GODOT" ]]; then
   echo "Godot binary not found — Python runtime test passed; open godot_test/ in Godot Editor to view."
+  echo "Set GODOT_BIN=/path/to/Godot to let this script find it."
   exit 0
 fi
+
+# New/changed .glb files aren't visible to Godot until the asset database
+# imports them — without this pass, parts render invisible on first launch.
+echo "Importing new assets..."
+"$GODOT" --headless --editor --path "$ROOT/godot_test" --import --quit >/dev/null 2>&1 || true
 
 echo "Launching Godot: $GODOT"
 exec "$GODOT" --path "$ROOT/godot_test"
