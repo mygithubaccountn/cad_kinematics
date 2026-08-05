@@ -15,9 +15,22 @@ static func load_robot(robot_json_path: String) -> Node3D:
 	return build_tree(data, base_dir)
 
 
+## Returns a two-level tree:
+##   scene_root (Node3D, name = robot name) — NEVER transformed. This is
+##     what a caller packs as a scene's root (generate_scene.gd) or adds as
+##     a child (main.gd); Godot's editor explicitly warns against and does
+##     not reliably keep a transform on a scene's own root node, which is
+##     exactly why a rotated root showed up as an inconsistent/reverted
+##     orientation in the Editor.
+##   └── RobotRoot (Node3D) — the CAD Z-up -> Godot Y-up conversion (and
+##       all links/joints) lives here instead, one safe level down.
 static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
-	var root := Node3D.new()
-	root.name = str(data.get("name", "Robot"))
+	var scene_root := Node3D.new()
+	scene_root.name = str(data.get("name", "Robot"))
+
+	var robot_root := Node3D.new()
+	robot_root.name = "RobotRoot"
+	scene_root.add_child(robot_root)
 
 	var links: Array = data.get("links", [])
 	var joints: Array = data.get("joints", [])
@@ -37,31 +50,31 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 		nodes[str(link["id"])] = n
 
 	if not nodes.has(base_id):
-		# Phase 0: no kinematic base — attach everything under root
+		# Phase 0: no kinematic base — attach everything under RobotRoot
 		if joints.is_empty():
 			for link_id in nodes.keys():
-				root.add_child(nodes[link_id])
-			root.set_meta("cad_robot", true)
-			root.set_meta("phase", 0)
-			_apply_up_conversion(root, data)
-			return root
+				robot_root.add_child(nodes[link_id])
+			robot_root.set_meta("cad_robot", true)
+			robot_root.set_meta("phase", 0)
+			_apply_up_conversion(robot_root, data)
+			return scene_root
 		push_error("base_link missing: %s" % base_id)
-		_apply_up_conversion(root, data)
-		return root
+		_apply_up_conversion(robot_root, data)
+		return scene_root
 
-	root.add_child(nodes[base_id])
+	robot_root.add_child(nodes[base_id])
 
-	# Phase 0: empty joints → flat display (all other links under root)
+	# Phase 0: empty joints → flat display (all other links under RobotRoot)
 	if joints.is_empty():
 		for link_id in nodes.keys():
 			if link_id == base_id:
 				continue
-			root.add_child(nodes[link_id])
-		root.set_meta("cad_robot", true)
-		root.set_meta("phase", 0)
-		root.set_meta("frame", str(data.get("frame", "cad_z_up")))
-		_apply_up_conversion(root, data)
-		return root
+			robot_root.add_child(nodes[link_id])
+		robot_root.set_meta("cad_robot", true)
+		robot_root.set_meta("phase", 0)
+		robot_root.set_meta("frame", str(data.get("frame", "cad_z_up")))
+		_apply_up_conversion(robot_root, data)
+		return scene_root
 
 	# Parent joints: child node placed at origin under parent
 	var by_child: Dictionary = {}
@@ -98,16 +111,16 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 		child_n.set_meta("joint_angle", 0.0)
 		_attach_joint_data(child_n, j, jid, jtype, origin, axis)
 
-	# Attach any remaining orphans under root
+	# Attach any remaining orphans under RobotRoot
 	for link_id in nodes.keys():
 		var n: Node3D = nodes[link_id]
 		if n.get_parent() == null:
-			root.add_child(n)
+			robot_root.add_child(n)
 
-	root.set_meta("cad_robot", true)
-	root.set_meta("frame", str(data.get("frame", "gltf_y_up")))
-	_apply_up_conversion(root, data)
-	return root
+	robot_root.set_meta("cad_robot", true)
+	robot_root.set_meta("frame", str(data.get("frame", "gltf_y_up")))
+	_apply_up_conversion(robot_root, data)
+	return scene_root
 
 
 ## robot.json is currently always written with frame="cad_z_up" (the
@@ -115,14 +128,15 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 ## src/exporter/scene.py — but isn't enabled on the CLI path). Rather than
 ## touch the pipeline, apply that exact same, already-defined conversion
 ## here as the one place robot.json meets Godot's Y-up engine: rigidly
-## rotate the whole assembled tree, so mesh geometry and joint pivots move
-## together and every relative pivot/axis stays exactly as computed.
+## rotate RobotRoot (never the scene's own root — see build_tree()), so
+## mesh geometry and joint pivots move together and every relative
+## pivot/axis stays exactly as computed.
 ## Matches common/frames.py::cad_z_up_to_gltf_y_up(): (x,y,z) -> (x,z,-y).
-static func _apply_up_conversion(root: Node3D, data: Dictionary) -> void:
+static func _apply_up_conversion(robot_root: Node3D, data: Dictionary) -> void:
 	if str(data.get("frame", "cad_z_up")) != "cad_z_up":
 		return  # already Y-up (pipeline flag enabled) — nothing to do
 	var b := Basis(Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(0, 1, 0))
-	root.transform = Transform3D(b, Vector3.ZERO) * root.transform
+	robot_root.transform = Transform3D(b, Vector3.ZERO) * robot_root.transform
 
 
 ## GLB import produces a PackedScene (a Node3D/MeshInstance3D subtree), not

@@ -21,6 +21,7 @@ const ANIMATE_JOINT_DURATION := 2.2  # seconds for one out-and-back sweep
 const ANIMATE_FRACTION := 0.6        # peak sweep, as a fraction of the safe range
 
 var _robot: Node3D
+var _robot_root: Node3D  # RobotRoot — carries the CAD->Y-up conversion; _robot itself never does
 var _joint_nodes: Array[Node3D] = []
 var _joint_angles: Array[float] = []
 var _selected := 0
@@ -53,6 +54,7 @@ func _ready() -> void:
 		push_error("Robot yüklenemedi: %s" % ROBOT_JSON)
 		return
 	add_child(_robot)
+	_robot_root = _robot.get_node("RobotRoot")
 	_collect_joints(_robot)
 	_load_overlay_data()
 	_build_debug_overlay()
@@ -244,8 +246,9 @@ func _build_debug_overlay() -> void:
 		mat.emission_energy_multiplier = 0.6
 		mi.material_override = mat
 		mi.position = Vector3(pos[0], pos[1], pos[2])
-		# Parent under robot so CAD Z-up root rotation applies if any
-		_robot.add_child(mi)
+		# Parent under RobotRoot (not _robot itself) so the CAD Z-up -> Y-up
+		# conversion applies to these raw cad-frame positions too.
+		_robot_root.add_child(mi)
 	for ax in _overlay_data.get("axes", []):
 		var a: Array = ax.get("a", [0, 0, 0])
 		var b: Array = ax.get("b", [0, 0, 1])
@@ -261,7 +264,7 @@ func _build_debug_overlay() -> void:
 		im.surface_add_vertex(Vector3(a[0], a[1], a[2]))
 		im.surface_add_vertex(Vector3(b[0], b[1], b[2]))
 		im.surface_end()
-		_robot.add_child(mi)
+		_robot_root.add_child(mi)
 
 
 ## Anchored top-right, fixed width, one control per row — stays put and
