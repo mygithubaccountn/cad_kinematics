@@ -11,6 +11,9 @@ out/
 venv/
 *.FCStd
 .DS_Store
+/*.stp
+/*.STEP
+/*.step
 
 # Godot editor cache / per-machine import artifacts
 godot_test/.godot/
