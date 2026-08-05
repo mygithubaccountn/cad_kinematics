@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "robot.schema.json",
+  "title": "RobotDesc",
+  "type": "object",
+  "required": ["name", "frame", "base_link", "links", "joints"],
+  "properties": {
+    "name": { "type": "string" },
+    "frame": { "type": "string", "enum": ["gltf_y_up", "cad_z_up"] },
+    "base_link": { "type": "string" },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "mesh"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "mesh": { "type": "string" },
+          "part_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "joints": {
+      "type": "array",
+      "description": "Empty in phase 0. Populated from phase 3.",
+      "items": {
+        "type": "object",
+        "required": ["id", "parent", "child", "type", "origin", "axis"],
+        "properties": {
+          "id": { "type": "string" },
+          "parent": { "type": "string" },
+          "child": { "type": "string" },
+          "type": { "type": "string", "enum": ["revolute", "prismatic", "fixed"] },
+          "origin": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          },
+          "axis": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          },
+          "confidence": { "type": "number" }
+        }
+      }
+    },
+    "rest_pose": { "type": "object" },
+    "meta": { "type": "object" }
+  }
+}

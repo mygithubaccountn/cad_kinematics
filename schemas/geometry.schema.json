@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geometry.schema.json",
+  "title": "GeometryFeatures",
+  "type": "object",
+  "required": ["cylinders", "clusters", "contacts", "adjacency"],
+  "properties": {
+    "phase": { "type": "integer" },
+    "cylinders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "part_id", "axis_point", "axis_dir", "radius", "height"],
+        "properties": {
+          "id": { "type": "string" },
+          "part_id": { "type": "string" },
+          "axis_point": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          },
+          "axis_dir": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          },
+          "radius": { "type": "number" },
+          "height": { "type": "number" },
+          "kind": { "type": "string", "enum": ["inner", "outer", "unknown"] }
+        }
+      }
+    },
+    "planes": { "type": "array" },
+    "clusters": { "type": "array" },
+    "contacts": { "type": "array" },
+    "adjacency": { "type": "array" },
+    "meta": { "type": "object" }
+  }
+}

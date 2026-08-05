@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>CAD Robot Viewer</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #1a1d23; color: #e8eaed; font-family: system-ui, sans-serif; }
+    #c { display: block; width: 100%; height: 100%; }
+    #hud {
+      position: fixed; left: 16px; top: 16px; z-index: 2;
+      background: rgba(20,22,28,.85); padding: 12px 14px; border-radius: 8px;
+      max-width: 360px; font-size: 13px; line-height: 1.45;
+    }
+    #hud h1 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+    #hud code { font-size: 12px; color: #9ecbff; }
+    .err { color: #ff8a8a; }
+    label { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    #legend { margin-top: 8px; font-size: 12px; }
+    #legend span { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <h1>CAD Robot Viewer</h1>
+    <div id="status">Yükleniyor…</div>
+    <label><input type="checkbox" id="wiggle" /> Joint’leri hareket ettir</label>
+    <label><input type="checkbox" id="debug" checked /> Pivot / axis debug</label>
+    <label><input type="checkbox" id="colors" checked /> Link renkleri</label>
+    <div id="legend"></div>
+    <p style="margin:8px 0 0;opacity:.7">Rest pose → debug → hareket</p>
+  </div>
+  <canvas id="c"></canvas>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+    const statusEl = document.getElementById("status");
+    const wiggleEl = document.getElementById("wiggle");
+    const debugEl = document.getElementById("debug");
+    const colorsEl = document.getElementById("colors");
+    const legendEl = document.getElementById("legend");
+    const canvas = document.getElementById("c");
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1d23);
+
+    const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 100);
+    camera.position.set(0.8, 0.7, 1.2);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0.15, 0.15, 0);
+    controls.update();
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+    sun.position.set(2, 4, 3);
+    scene.add(sun);
+    scene.add(new THREE.GridHelper(2, 20, 0x444a55, 0x2a2f38));
+
+    const loader = new GLTFLoader();
+    const jointNodes = [];
+    const linkMeshes = []; // { mats: Material[], color: Color }
+    let debugGroup = new THREE.Group();
+    debugGroup.name = "debug_overlay";
+
+    function setStatus(html, isErr = false) {
+      statusEl.innerHTML = html;
+      statusEl.className = isErr ? "err" : "";
+    }
+
+    function tintMesh(root, color) {
+      const mats = [];
+      root.traverse((obj) => {
+        if (!obj.isMesh || !obj.material) return;
+        const list = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const m of list) {
+          const c = m.clone();
+          c.color = color.clone();
+          c.side = THREE.DoubleSide;
+          c.needsUpdate = true;
+          mats.push({ mat: c, base: m.color ? m.color.clone() : new THREE.Color(0xcccccc) });
+        }
+        obj.material = list.length > 1 ? mats.slice(-list.length).map((x) => x.mat) : mats[mats.length - 1].mat;
+      });
+      return mats;
+    }
+
+    async function loadOverlay(root) {
+      try {
+        const res = await fetch("./debug_overlay.json");
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    function buildDebug(overlay, root) {
+      debugGroup.clear();
+      if (!overlay) return;
+      const frame = overlay.frame || "cad_z_up";
+      // Markers are in robot.json / Godot frame (same as link locals under root)
+      for (const m of overlay.markers || []) {
+        const col = new THREE.Color().setRGB(m.color[0], m.color[1], m.color[2]);
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(m.radius_m || 0.012, 16, 12),
+          new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.35 })
+        );
+        sphere.position.set(m.position[0], m.position[1], m.position[2]);
+        sphere.name = "pivot_" + m.id;
+        debugGroup.add(sphere);
+      }
+      for (const ax of overlay.axes || []) {
+        const col = new THREE.Color().setRGB(ax.color[0], ax.color[1], ax.color[2]);
+        const pts = [
+          new THREE.Vector3(ax.a[0], ax.a[1], ax.a[2]),
+          new THREE.Vector3(ax.b[0], ax.b[1], ax.b[2]),
+        ];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: col, linewidth: 2 }));
+        line.name = "axis_" + ax.id;
+        debugGroup.add(line);
+      }
+      root.add(debugGroup);
+      debugGroup.visible = debugEl.checked;
+
+      legendEl.innerHTML = (overlay.legend || [])
+        .map((L) => `<div><span style="background:${L.hex}"></span><code>${L.id}</code></div>`)
+        .join("");
+    }
+
+    async function loadRobot() {
+      const res = await fetch("./robot.json");
+      if (!res.ok) throw new Error("robot.json okunamadı — viewer klasöründen sunucu ile aç");
+      const data = await res.json();
+      const overlay = await loadOverlay();
+
+      const root = new THREE.Group();
+      root.name = data.name || "Robot";
+      const frame = data.frame || "cad_z_up";
+      if (frame === "cad_z_up") {
+        root.rotation.x = -Math.PI / 2;
+      }
+      scene.add(root);
+
+      const colorMap = (overlay && overlay.link_colors) || {};
+      const nodes = {};
+      for (const link of data.links || []) {
+        const g = new THREE.Group();
+        g.name = link.name || link.id;
+        nodes[link.id] = g;
+
+        if (link.mesh) {
+          try {
+            const gltf = await loader.loadAsync("./" + link.mesh);
+            const rgb = colorMap[link.id]?.rgb || [0.75, 0.75, 0.78];
+            const col = new THREE.Color().setRGB(rgb[0], rgb[1], rgb[2]);
+            const mats = [];
+            gltf.scene.traverse((obj) => {
+              if (obj.isMesh && obj.material) {
+                const list = Array.isArray(obj.material) ? obj.material : [obj.material];
+                const cloned = list.map((m) => {
+                  const c = m.clone();
+                  c.userData.baseColor = c.color ? c.color.clone() : new THREE.Color(0xcccccc);
+                  c.color = col.clone();
+                  c.side = THREE.DoubleSide;
+                  c.needsUpdate = true;
+                  return c;
+                });
+                obj.material = cloned.length === 1 ? cloned[0] : cloned;
+                mats.push(...cloned);
+              }
+            });
+            g.add(gltf.scene);
+            linkMeshes.push({ mats, tint: col });
+          } catch (e) {
+            console.warn("mesh fail", link.mesh, e);
+            const box = new THREE.Mesh(
+              new THREE.BoxGeometry(0.05, 0.05, 0.05),
+              new THREE.MeshStandardMaterial({ color: 0xff6666 })
+            );
+            g.add(box);
+          }
+        }
+      }
+
+      const baseId = data.base_link;
+      const joints = data.joints || [];
+      if (!nodes[baseId]) throw new Error("base_link yok: " + baseId);
+      root.add(nodes[baseId]);
+
+      const pending = [...joints];
+      let guard = 0;
+      while (pending.length && guard++ < 10000) {
+        const j = pending.shift();
+        const parent = nodes[j.parent];
+        const child = nodes[j.child];
+        if (!parent || !child) continue;
+        if (child.parent) continue;
+        if (!parent.parent && j.parent !== baseId) {
+          pending.push(j);
+          continue;
+        }
+        parent.add(child);
+        const o = j.origin || [0, 0, 0];
+        child.position.set(o[0], o[1], o[2]);
+        const a = j.axis || [0, 0, 1];
+        const axis = new THREE.Vector3(a[0], a[1], a[2]).normalize();
+        if (j.type === "revolute" || j.type === "prismatic") {
+          jointNodes.push({
+            obj: child,
+            type: j.type,
+            axis,
+            restPos: child.position.clone(),
+            id: j.id,
+          });
+        }
+      }
+
+      for (const id of Object.keys(nodes)) {
+        if (!nodes[id].parent) root.add(nodes[id]);
+      }
+
+      buildDebug(overlay, root);
+      applyColors(colorsEl.checked);
+
+      const box = new THREE.Box3().setFromObject(root);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z, 0.2);
+      controls.target.copy(center);
+      camera.position.copy(center).add(new THREE.Vector3(maxDim * 1.5, maxDim * 1.1, maxDim * 1.8));
+      camera.near = maxDim / 100;
+      camera.far = maxDim * 50;
+      camera.updateProjectionMatrix();
+      controls.update();
+
+      setStatus(
+        `<div><b>${data.name || "robot"}</b></div>` +
+        `<div>link: ${data.links.length} · joint: ${joints.length}</div>` +
+        `<div>hareketli: ${jointNodes.length} · pivot: ${(overlay && overlay.markers || []).length}</div>` +
+        `<div><code>${baseId}</code> · ${frame}</div>`
+      );
+    }
+
+    function applyColors(on) {
+      for (const entry of linkMeshes) {
+        for (const m of entry.mats) {
+          if (on) m.color.copy(entry.tint);
+          else if (m.userData.baseColor) m.color.copy(m.userData.baseColor);
+          m.needsUpdate = true;
+        }
+      }
+    }
+
+    debugEl.addEventListener("change", () => { debugGroup.visible = debugEl.checked; });
+    colorsEl.addEventListener("change", () => applyColors(colorsEl.checked));
+
+    let t = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      t += 0.016;
+      if (wiggleEl.checked) {
+        const v = Math.sin(t) * 0.4;
+        for (const j of jointNodes) {
+          if (j.type === "revolute") {
+            j.obj.rotation.set(0, 0, 0);
+            j.obj.rotateOnAxis(j.axis, v);
+          } else if (j.type === "prismatic") {
+            j.obj.position.copy(j.restPos).addScaledVector(j.axis, v * 0.05);
+          }
+        }
+      }
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    try {
+      await loadRobot();
+      animate();
+    } catch (e) {
+      console.error(e);
+      setStatus("Hata: " + e.message + "<br>Şunu çalıştır:<br><code>./open_viewer.sh out/step</code>", true);
+    }
+  </script>
+</body>
+</html>

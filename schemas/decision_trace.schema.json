@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "decision_trace.schema.json",
+  "title": "DecisionTraceFile",
+  "type": "object",
+  "required": ["traces"],
+  "properties": {
+    "phase": { "type": "integer" },
+    "algorithm": { "type": "string" },
+    "selected": { "type": "array" },
+    "rejected_notable": { "type": "array" },
+    "traces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subject", "evidence"],
+        "properties": {
+          "subject": { "type": "string" },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "score"],
+              "properties": {
+                "name": { "type": "string" },
+                "score": { "type": "number" },
+                "detail": { "type": "string" }
+              }
+            }
+          },
+          "rejected": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "array", "items": { "type": "string" } },
+          "total_score": { "type": "number" },
+          "summary": { "type": "string" },
+          "confidence": { "type": "number" },
+          "chosen": {
+            "type": "object",
+            "properties": {
+              "origin": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+              "axis": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+              "method": { "type": "string" },
+              "confidence": { "type": "number" },
+              "detail": { "type": "string" }
+            }
+          },
+          "runner_up": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "origin": { "type": "array", "items": { "type": "number" } },
+              "axis": { "type": "array", "items": { "type": "number" } },
+              "score": { "type": "number" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "meta": { "type": "object" }
+  }
+}

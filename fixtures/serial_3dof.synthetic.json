@@ -1,0 +1,5 @@
+{
+  "fixture": "serial_3dof",
+  "description": "Pointer file — pipeline loads built-in synthetic serial 3-DOF assembly",
+  "note": "Use path ending with serial_3dof.synthetic.json"
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "assembly_ir.schema.json",
+  "title": "AssemblyIR",
+  "type": "object",
+  "required": ["source_path", "parts", "unit"],
+  "properties": {
+    "source_path": { "type": "string" },
+    "unit": { "type": "string", "const": "metre" },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "placement", "volume", "bbox"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "placement": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": { "type": "number" }
+            }
+          },
+          "volume": { "type": "number" },
+          "bbox": {
+            "type": "object",
+            "required": ["min_xyz", "max_xyz"],
+            "properties": {
+              "min_xyz": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": { "type": "number" }
+              },
+              "max_xyz": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "assembly_nodes": { "type": "array" },
+    "mate_hints": { "type": "array" },
+    "meta": { "type": "object" }
+  }
+}
