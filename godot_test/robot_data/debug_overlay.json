@@ -2,45 +2,105 @@
   "axes": [
     {
       "a": [
-        0.010000000000000002,
         0.0,
-        0.0
+        -2.0816681711721685e-17,
+        -0.05575
       ],
       "b": [
-        0.09,
         0.0,
+        -2.0816681711721685e-17,
+        -0.13575
+      ],
+      "child": "link_part_0005",
+      "color": [
+        0.95,
+        0.61,
+        0.07
+      ],
+      "direction": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "id": "jhyp_0000",
+      "kind": "axis",
+      "parent": "link_part_0000"
+    },
+    {
+      "a": [
+        0.0,
+        -0.0721575757575687,
+        -0.35000000000000003
+      ],
+      "b": [
+        0.0,
+        0.007842424242431305,
+        -0.35000000000000003
+      ],
+      "child": "link_part_0000",
+      "color": [
+        0.91,
+        0.3,
+        0.24
+      ],
+      "direction": [
+        0.0,
+        1.0,
         0.0
       ],
-      "child": "link_frame",
+      "id": "jhyp_0001",
+      "kind": "axis",
+      "parent": "link_part_0001"
+    },
+    {
+      "a": [
+        0.0,
+        -0.01939102008774085,
+        -0.66
+      ],
+      "b": [
+        0.0,
+        0.06060897991225915,
+        -0.66
+      ],
+      "child": "link_part_0001",
       "color": [
         0.2,
         0.6,
         0.86
       ],
       "direction": [
-        1.0,
         0.0,
-        0.0
+        1.0,
+        -3.4865712139183844e-18
       ],
-      "id": "jhyp_0000",
+      "id": "jhyp_0002",
       "kind": "axis",
-      "parent": "link_door"
+      "parent": "link_part_0002"
     }
   ],
-  "base_link": "link_door",
+  "base_link": "link_part_0002",
   "frame": "cad_z_up",
   "legend": [
     {
       "hex": "#e84c3d",
-      "id": "link_door"
+      "id": "link_part_0000"
     },
     {
       "hex": "#3399db",
-      "id": "link_frame"
+      "id": "link_part_0001"
+    },
+    {
+      "hex": "#4cc672",
+      "id": "link_part_0002"
+    },
+    {
+      "hex": "#f29b11",
+      "id": "link_part_0005"
     }
   ],
   "link_colors": {
-    "link_door": {
+    "link_part_0000": {
       "hex": "#e84c3d",
       "rgb": [
         0.91,
@@ -48,31 +108,83 @@
         0.24
       ]
     },
-    "link_frame": {
+    "link_part_0001": {
       "hex": "#3399db",
       "rgb": [
         0.2,
         0.6,
         0.86
       ]
+    },
+    "link_part_0002": {
+      "hex": "#4cc672",
+      "rgb": [
+        0.3,
+        0.78,
+        0.45
+      ]
+    },
+    "link_part_0005": {
+      "hex": "#f29b11",
+      "rgb": [
+        0.95,
+        0.61,
+        0.07
+      ]
     }
   },
   "markers": [
     {
-      "child": "link_frame",
+      "child": "link_part_0005",
+      "color": [
+        0.95,
+        0.61,
+        0.07
+      ],
+      "id": "jhyp_0000",
+      "joint_type": "revolute",
+      "kind": "pivot",
+      "parent": "link_part_0000",
+      "position": [
+        0.0,
+        -2.0816681711721685e-17,
+        -0.09575
+      ],
+      "radius_m": 0.012
+    },
+    {
+      "child": "link_part_0000",
+      "color": [
+        0.91,
+        0.3,
+        0.24
+      ],
+      "id": "jhyp_0001",
+      "joint_type": "revolute",
+      "kind": "pivot",
+      "parent": "link_part_0001",
+      "position": [
+        0.0,
+        -0.032157575757568696,
+        -0.35000000000000003
+      ],
+      "radius_m": 0.012
+    },
+    {
+      "child": "link_part_0001",
       "color": [
         0.2,
         0.6,
         0.86
       ],
-      "id": "jhyp_0000",
+      "id": "jhyp_0002",
       "joint_type": "revolute",
       "kind": "pivot",
-      "parent": "link_door",
+      "parent": "link_part_0002",
       "position": [
-        0.05,
         0.0,
-        0.0
+        0.02060897991225915,
+        -0.66
       ],
       "radius_m": 0.012
     }

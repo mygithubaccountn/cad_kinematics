@@ -1,145 +1,100 @@
 [gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0000.mesh.tres" id="1_u36h4"]
-[ext_resource type="Script" path="res://addons/cad_robot_importer/robot_link.gd" id="2_65hnj"]
-[ext_resource type="Script" path="res://addons/cad_robot_importer/joint_data.gd" id="3_5u52j"]
-[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0001.mesh.tres" id="4_fubbs"]
-[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0002.mesh.tres" id="5_1eof6"]
-[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0003.mesh.tres" id="6_205jy"]
-[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0006.mesh.tres" id="7_5b7cb"]
-[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0004.mesh.tres" id="8_ihkdc"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0002.mesh.tres" id="1_w225d"]
+[ext_resource type="Script" path="res://addons/cad_robot_importer/robot_link.gd" id="2_vrkj3"]
+[ext_resource type="Script" path="res://addons/cad_robot_importer/joint_data.gd" id="3_u36h4"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0001.mesh.tres" id="4_65hnj"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0000.mesh.tres" id="5_5u52j"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0005.mesh.tres" id="6_fubbs"]
 
-[sub_resource type="Resource" id="Resource_hel13"]
-script = ExtResource("3_5u52j")
+[sub_resource type="Resource" id="Resource_1eof6"]
+script = ExtResource("3_u36h4")
+joint_id = "jhyp_0002"
+parent_link = "link_part_0002"
+child_link = "link_part_0001"
+pivot = Vector3(0, 0.02060898, -0.66)
+axis = Vector3(0, 1, -3.4865712e-18)
+confidence = 0.8440084173508516
+
+[sub_resource type="Resource" id="Resource_205jy"]
+script = ExtResource("3_u36h4")
+joint_id = "jhyp_0001"
+parent_link = "link_part_0001"
+child_link = "link_part_0000"
+pivot = Vector3(0, -0.052766554, 0.31)
+confidence = 0.8499258181818191
+
+[sub_resource type="Resource" id="Resource_5b7cb"]
+script = ExtResource("3_u36h4")
 joint_id = "jhyp_0000"
 parent_link = "link_part_0000"
-child_link = "link_part_0001"
-pivot = Vector3(0, 0, 0.187)
-axis = Vector3(0, 0, 1)
-confidence = 0.40001
+child_link = "link_part_0005"
+pivot = Vector3(0, 0.032157578, 0.25425)
+axis = Vector3(0, 0, -1)
+confidence = 0.7384800000000001
 
-[sub_resource type="Resource" id="Resource_si5fy"]
-script = ExtResource("3_5u52j")
-joint_id = "jhyp_0002"
-parent_link = "link_part_0001"
-child_link = "link_part_0002"
-pivot = Vector3(0.0054865447, 0.1, 0.133)
-axis = Vector3(1, 0, 0)
-confidence = 0.7816117162748876
+[sub_resource type="PlaneMesh" id="PlaneMesh_ihkdc"]
+size = Vector2(3.0482976, 3.0482976)
 
-[sub_resource type="Resource" id="Resource_cxfwm"]
-script = ExtResource("3_5u52j")
-joint_id = "jhyp_0003"
-parent_link = "link_part_0002"
-child_link = "link_part_0003"
-pivot = Vector3(0.0150058605, 0, 0.25)
-axis = Vector3(1, 0, 0)
-confidence = 0.770457480112349
-
-[sub_resource type="Resource" id="Resource_m2j7k"]
-script = ExtResource("3_5u52j")
-joint_id = "jhyp_0006"
-parent_link = "link_part_0003"
-child_link = "link_part_0006"
-pivot = Vector3(-0.020492405, 0.05901875, 0)
-axis = Vector3(0, -1, 0)
-confidence = 0.4384725
-
-[sub_resource type="Resource" id="Resource_ugndw"]
-script = ExtResource("3_5u52j")
-joint_id = "jhyp_0010"
-parent_link = "link_part_0006"
-child_link = "link_part_0004"
-pivot = Vector3(0.0036734918, 0.19098125, 0)
-axis = Vector3(-1, 0, 0)
-confidence = 0.6939926501940157
-
-[sub_resource type="PlaneMesh" id="PlaneMesh_dvxbm"]
-size = Vector2(2.7282763, 2.7282763)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hb0qa"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hel13"]
 albedo_color = Color(0.24, 0.26, 0.29, 1)
 roughness = 0.9
 
-[node name="robot" type="Node3D" unique_id=710137041]
+[node name="robot_v_4flm_d1_s15" type="Node3D" unique_id=1769169171]
 transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
 metadata/cad_robot = true
 metadata/frame = "cad_z_up"
 
-[node name="link_part_0000" type="Node3D" parent="." unique_id=398860385]
+[node name="link_part_0002" type="Node3D" parent="." unique_id=1264926559]
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000" unique_id=1171208844]
-mesh = ExtResource("1_u36h4")
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0002" unique_id=1712584761]
+mesh = ExtResource("1_w225d")
 
-[node name="link_part_0001" type="Node3D" parent="link_part_0000" unique_id=2112745241]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.187)
-script = ExtResource("2_65hnj")
-joint = SubResource("Resource_hel13")
-metadata/joint_id = "jhyp_0000"
-metadata/joint_type = "revolute"
-metadata/joint_axis = Vector3(0, 0, 1)
-metadata/joint_angle = 0.0
-
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001" unique_id=772633495]
-mesh = ExtResource("4_fubbs")
-
-[node name="link_part_0002" type="Node3D" parent="link_part_0000/link_part_0001" unique_id=713119332]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0054865447, 0.1, 0.133)
-script = ExtResource("2_65hnj")
-joint = SubResource("Resource_si5fy")
+[node name="link_part_0001" type="Node3D" parent="link_part_0002" unique_id=1749730143]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02060898, -0.66)
+script = ExtResource("2_vrkj3")
+joint = SubResource("Resource_1eof6")
 metadata/joint_id = "jhyp_0002"
 metadata/joint_type = "revolute"
-metadata/joint_axis = Vector3(1, 0, 0)
+metadata/joint_axis = Vector3(0, 1, -3.4865712e-18)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1564221315]
-mesh = ExtResource("5_1eof6")
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0002/link_part_0001" unique_id=2040865034]
+mesh = ExtResource("4_65hnj")
 
-[node name="link_part_0003" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1956621754]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0150058605, 0, 0.25)
-script = ExtResource("2_65hnj")
-joint = SubResource("Resource_cxfwm")
-metadata/joint_id = "jhyp_0003"
+[node name="link_part_0000" type="Node3D" parent="link_part_0002/link_part_0001" unique_id=1027689305]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.052766554, 0.31)
+script = ExtResource("2_vrkj3")
+joint = SubResource("Resource_205jy")
+metadata/joint_id = "jhyp_0001"
 metadata/joint_type = "revolute"
-metadata/joint_axis = Vector3(1, 0, 0)
+metadata/joint_axis = Vector3(0, 1, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=74059497]
-mesh = ExtResource("6_205jy")
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0002/link_part_0001/link_part_0000" unique_id=2010487270]
+mesh = ExtResource("5_5u52j")
 
-[node name="link_part_0006" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=576938889]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.020492405, 0.05901875, 0)
-script = ExtResource("2_65hnj")
-joint = SubResource("Resource_m2j7k")
-metadata/joint_id = "jhyp_0006"
+[node name="link_part_0005" type="Node3D" parent="link_part_0002/link_part_0001/link_part_0000" unique_id=2102562619]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032157578, 0.25425)
+script = ExtResource("2_vrkj3")
+joint = SubResource("Resource_5b7cb")
+metadata/joint_id = "jhyp_0000"
 metadata/joint_type = "revolute"
-metadata/joint_axis = Vector3(0, -1, 0)
+metadata/joint_axis = Vector3(0, 0, -1)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1284556939]
-mesh = ExtResource("7_5b7cb")
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0002/link_part_0001/link_part_0000/link_part_0005" unique_id=204942768]
+mesh = ExtResource("6_fubbs")
 
-[node name="link_part_0004" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=160176984]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0036734918, 0.19098125, 0)
-script = ExtResource("2_65hnj")
-joint = SubResource("Resource_ugndw")
-metadata/joint_id = "jhyp_0010"
-metadata/joint_type = "revolute"
-metadata/joint_axis = Vector3(-1, 0, 0)
-metadata/joint_angle = 0.0
-
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006/link_part_0004" unique_id=616629131]
-mesh = ExtResource("8_ihkdc")
-
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1438733742]
-transform = Transform3D(0.76484215, 0.3088544, -0.5653542, 0, 0.8775826, 0.47942546, 0.6442177, -0.36668482, 0.67121214, -0.64268434, 0.86525214, 0.65527165)
+[node name="Camera3D" type="Camera3D" parent="." unique_id=2036026755]
+transform = Transform3D(0.76484215, 0.30885443, -0.5653542, 0, 0.87758255, 0.47942555, 0.6442177, -0.36668488, 0.67121214, -0.82651997, 0.22645268, 0.8590226)
 current = true
 
-[node name="Ground" type="MeshInstance3D" parent="." unique_id=622231124]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.450581e-09, 0, -0.10775)
-mesh = SubResource("PlaneMesh_dvxbm")
-surface_material_override/0 = SubResource("StandardMaterial3D_hb0qa")
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1860141325]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.108449996, -0.7649543, 0.0064999983)
+mesh = SubResource("PlaneMesh_ihkdc")
+surface_material_override/0 = SubResource("StandardMaterial3D_hel13")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1322121150]
-transform = Transform3D(0.70710677, -0.52981293, 0.46829292, 0, 0.6622662, 0.74926865, -0.70710677, -0.52981293, 0.46829292, 0.4547127, 1.0477903, 0.3469627)
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=543434771]
+transform = Transform3D(0.70710677, -0.52981293, 0.46829292, 0, 0.66226614, 0.7492687, -0.70710677, -0.52981293, 0.46829292, 0.3995996, 0.4304022, 0.5145496)
 shadow_enabled = true

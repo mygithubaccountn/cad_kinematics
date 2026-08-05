@@ -1,48 +1,121 @@
 {
-  "base_link": "link_door",
+  "base_link": "link_part_0002",
   "frame": "cad_z_up",
   "joints": [
     {
       "axis": [
-        1.0,
         0.0,
-        0.0
+        0.0,
+        -1.0
       ],
-      "child": "link_frame",
-      "confidence": 1.0,
+      "child": "link_part_0005",
+      "confidence": 0.7384800000000001,
       "id": "jhyp_0000",
       "name": "jhyp_0000",
       "origin": [
-        0.05,
         0.0,
+        0.032157575757568675,
+        0.25425000000000003
+      ],
+      "parent": "link_part_0000",
+      "type": "revolute"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
         0.0
       ],
-      "parent": "link_door",
+      "child": "link_part_0000",
+      "confidence": 0.8499258181818191,
+      "id": "jhyp_0001",
+      "name": "jhyp_0001",
+      "origin": [
+        0.0,
+        -0.052766555669827846,
+        0.31
+      ],
+      "parent": "link_part_0001",
+      "type": "revolute"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        -3.4865712139183844e-18
+      ],
+      "child": "link_part_0001",
+      "confidence": 0.8440084173508516,
+      "id": "jhyp_0002",
+      "name": "jhyp_0002",
+      "origin": [
+        0.0,
+        0.02060897991225915,
+        -0.66
+      ],
+      "parent": "link_part_0002",
       "type": "revolute"
     }
   ],
   "links": [
     {
-      "id": "link_door",
-      "mesh": "meshes/link_door.glb",
-      "name": "link_door",
+      "id": "link_part_0000",
+      "mesh": "meshes/link_part_0000.glb",
+      "name": "link_part_0000",
       "part_ids": [
-        "door"
+        "part_0000"
       ]
     },
     {
-      "id": "link_frame",
-      "mesh": "meshes/link_frame.glb",
-      "name": "link_frame",
+      "id": "link_part_0001",
+      "mesh": "meshes/link_part_0001.glb",
+      "name": "link_part_0001",
       "part_ids": [
-        "frame"
+        "part_0001",
+        "part_0003",
+        "part_0004"
+      ]
+    },
+    {
+      "id": "link_part_0002",
+      "mesh": "meshes/link_part_0002.glb",
+      "name": "link_part_0002",
+      "part_ids": [
+        "part_0002"
+      ]
+    },
+    {
+      "id": "link_part_0005",
+      "mesh": "meshes/link_part_0005.glb",
+      "name": "link_part_0005",
+      "part_ids": [
+        "part_0005"
       ]
     }
   ],
   "meta": {
     "kinematic_meta": {
-      "base_part": "door",
-      "merged_orphans": [],
+      "base_part": "part_0002",
+      "merged_orphans": [
+        {
+          "aabb_gap_m": 0.0,
+          "host": "link_part_0001",
+          "host_in_tree": true,
+          "orphan": "link_part_0003",
+          "proximity": 1.0,
+          "score": 0.6000000000000001,
+          "volume_ok": true
+        },
+        {
+          "aabb_gap_m": 0.0,
+          "host": "link_part_0001",
+          "host_in_tree": true,
+          "orphan": "link_part_0004",
+          "proximity": 1.0,
+          "score": 0.6000000000000001,
+          "volume_ok": true
+        }
+      ],
       "n_welds": 0,
       "parallel_loops": [],
       "suspicious_orphans": []
@@ -50,8 +123,13 @@
     "mesh_quality": "preview",
     "pipeline": "cad-godot-robot-pipeline",
     "placement": "upright_z_up_base_on_ground",
-    "source": "/Users/nisa/Desktop/cad_kinematics/fixtures/simple_hinge.synthetic.json",
+    "source": "/Users/nisa/Desktop/cad_kinematics/uploads/robot v 4flm d1 s15.STEP",
     "upright_R": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
       [
         0.0,
         0.0,
@@ -59,25 +137,22 @@
       ],
       [
         0.0,
-        1.0,
-        0.0
-      ],
-      [
         -1.0,
-        0.0,
         0.0
       ]
     ],
     "upright_t": [
-      -0.05,
-      0.0,
-      0.15
+      -0.013157729256067011,
+      -0.006500000000002677,
+      0.8022975790003496
     ]
   },
-  "name": "simple_hinge",
+  "name": "robot_v_4flm_d1_s15",
   "rest_pose": {
     "joints": {
-      "jhyp_0000": 0.0
+      "jhyp_0000": 0.0,
+      "jhyp_0001": 0.0,
+      "jhyp_0002": 0.0
     }
   }
 }

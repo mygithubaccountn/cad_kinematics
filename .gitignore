@@ -14,6 +14,7 @@ venv/
 /*.stp
 /*.STEP
 /*.step
+uploads/
 
 # Godot editor cache / per-machine import artifacts
 godot_test/.godot/
