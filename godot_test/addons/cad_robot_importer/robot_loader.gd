@@ -31,10 +31,7 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 		if mesh_rel != "":
 			var mesh_path := base_dir.path_join(mesh_rel)
 			if ResourceLoader.exists(mesh_path):
-				var mi := MeshInstance3D.new()
-				mi.name = "Mesh"
-				mi.mesh = load(mesh_path)
-				n.add_child(mi)
+				_attach_mesh(n, mesh_path)
 			else:
 				push_warning("Missing mesh: %s" % mesh_path)
 		nodes[str(link["id"])] = n
@@ -104,6 +101,28 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 	root.set_meta("cad_robot", true)
 	root.set_meta("frame", str(data.get("frame", "gltf_y_up")))
 	return root
+
+
+## GLB import defaults to a PackedScene (a Node3D + MeshInstance3D subtree),
+## not a bare Mesh — assigning it straight to MeshInstance3D.mesh silently
+## drops it. Instantiate the scene instead; only fall back to a plain
+## MeshInstance3D if a project import preset ever changes this to type Mesh.
+static func _attach_mesh(parent: Node3D, mesh_path: String) -> void:
+	var res: Resource = load(mesh_path)
+	if res == null:
+		push_warning("Failed to load mesh resource: %s" % mesh_path)
+		return
+	if res is PackedScene:
+		var inst := (res as PackedScene).instantiate()
+		inst.name = "Mesh"
+		parent.add_child(inst)
+	elif res is Mesh:
+		var mi := MeshInstance3D.new()
+		mi.name = "Mesh"
+		mi.mesh = res
+		parent.add_child(mi)
+	else:
+		push_warning("Unexpected mesh resource type for %s: %s" % [mesh_path, res])
 
 
 ## Rotate / translate a joint child node. Pipeline already set pivot as node origin.

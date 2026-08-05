@@ -135,22 +135,27 @@ func _load_overlay_data() -> void:
 func _apply_tint(node: Node, on: bool) -> void:
 	var colors: Dictionary = _overlay_data.get("link_colors", {})
 	if node is Node3D and colors.has(node.name):
-		for c in node.get_children():
-			if c is MeshInstance3D:
-				var mi := c as MeshInstance3D
-				if mi.mesh == null:
-					continue
-				if not on:
-					for si in range(mi.mesh.get_surface_count()):
-						mi.set_surface_override_material(si, null)
-					continue
-				var rgb: Array = colors[node.name].get("rgb", [0.8, 0.8, 0.8])
-				var mat := StandardMaterial3D.new()
-				mat.albedo_color = Color(float(rgb[0]), float(rgb[1]), float(rgb[2]))
-				for si in range(mi.mesh.get_surface_count()):
-					mi.set_surface_override_material(si, mat)
+		var rgb: Array = colors[node.name].get("rgb", [0.8, 0.8, 0.8])
+		var mat: StandardMaterial3D = null
+		if on:
+			mat = StandardMaterial3D.new()
+			mat.albedo_color = Color(float(rgb[0]), float(rgb[1]), float(rgb[2]))
+		_tint_mesh_instances(node, mat)
 	for c in node.get_children():
 		_apply_tint(c, on)
+
+
+## Mesh instances live inside the instantiated GLB scene subtree, at whatever
+## depth the exporter's node hierarchy put them — not necessarily a direct
+## child of the link node, so this has to recurse.
+func _tint_mesh_instances(node: Node, mat: StandardMaterial3D) -> void:
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.mesh != null:
+			for si in range(mi.mesh.get_surface_count()):
+				mi.set_surface_override_material(si, mat)
+	for c in node.get_children():
+		_tint_mesh_instances(c, mat)
 
 
 func _build_debug_overlay() -> void:
