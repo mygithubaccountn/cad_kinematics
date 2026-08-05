@@ -1,542 +1,842 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CAD Robot — Test</title>
-  <style>
-    :root {
-      --bg: #12151a;
-      --panel: #1a1f27;
-      --line: #2a313c;
-      --text: #e8eaed;
-      --muted: #9aa3af;
-      --accent: #3d9cf0;
-      --accent2: #2f6fad;
-      --ok: #3ecf8e;
-      --err: #ff6b6b;
-      --warn: #e6b84d;
-      --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-      --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0; height: 100%;
-      background: radial-gradient(1200px 600px at 10% -10%, #1c2430 0%, var(--bg) 55%);
-      color: var(--text);
-      font-family: var(--sans);
-    }
-    .app {
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      grid-template-rows: auto 1fr;
-      height: 100%;
-      gap: 0;
-    }
-    header {
-      grid-column: 1 / -1;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(18,21,26,.9);
-      backdrop-filter: blur(8px);
-    }
-    header h1 {
-      margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em;
-    }
-    header h1 span { color: var(--muted); font-weight: 400; margin-left: 8px; }
-    .badge {
-      font-size: 12px; color: var(--muted);
-      border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px;
-    }
-    .badge.run { color: var(--warn); border-color: #5a4a22; }
-    .badge.ok { color: var(--ok); border-color: #1f4d38; }
-    .badge.err { color: var(--err); border-color: #5a2a2a; }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CAD Kinematics — STEP → Robot</title>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --grid-line: rgba(148, 178, 209, 0.05);
+    --panel: #12161d;
+    --panel-2: #171c24;
+    --line: #232a35;
+    --line-soft: #1b212b;
+    --text: #e7ecf3;
+    --muted: #8996a8;
+    --muted-2: #5f6b7d;
+    --accent: #45c1f5;
+    --accent-dim: #1f5a76;
+    --accent-glow: rgba(69, 193, 245, 0.35);
+    --ok: #3ddc97;
+    --ok-dim: #163d2d;
+    --warn: #f5b942;
+    --warn-dim: #4a3a12;
+    --err: #f2657a;
+    --err-dim: #4a1c24;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", "Inter", system-ui, sans-serif;
+    --radius: 14px;
+    --radius-sm: 9px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(900px 500px at 15% -10%, #16202b 0%, var(--bg) 55%),
+      repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px 48px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 48px),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { max-width: 980px; margin: 0 auto; padding: 28px 24px 64px; }
 
-    aside {
-      border-right: 1px solid var(--line);
-      padding: 16px;
-      overflow: auto;
-      background: var(--panel);
-    }
-    label {
-      display: block; font-size: 11px; text-transform: uppercase;
-      letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px;
-    }
-    label:first-child { margin-top: 0; }
-    select, input[type=text] {
-      width: 100%;
-      background: #10141a;
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px 12px;
-      font: 13px/1.3 var(--sans);
-    }
-    select:focus, input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
-    .row { display: flex; gap: 8px; }
-    .row > * { flex: 1; }
-    .checks {
-      display: flex; flex-direction: column; gap: 8px;
-      margin-top: 10px; font-size: 13px; color: var(--muted);
-    }
-    .checks label {
-      display: flex; align-items: center; gap: 8px;
-      margin: 0; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text);
-      cursor: pointer;
-    }
-    .checks input { accent-color: var(--accent); }
-    button {
-      border: 0; border-radius: 8px; padding: 10px 14px;
-      font: 600 13px/1 var(--sans); cursor: pointer;
-      transition: transform .05s ease, opacity .15s;
-    }
-    button:active { transform: translateY(1px); }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    .btn-primary { background: linear-gradient(180deg, var(--accent), var(--accent2)); color: #fff; width: 100%; margin-top: 14px; }
-    .btn-ghost { background: #10141a; color: var(--text); border: 1px solid var(--line); }
-    .hint { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
-    .summary {
-      margin-top: 14px; padding: 10px 12px; border-radius: 8px;
-      background: #10141a; border: 1px solid var(--line);
-      font: 12px/1.45 var(--mono); color: var(--muted);
-      white-space: pre-wrap;
-    }
-    .progress {
-      margin-top: 10px; padding: 10px 12px; border-radius: 8px;
-      background: #10141a; border: 1px solid var(--line);
-      font-size: 12px; color: var(--text);
-    }
-    .progress .bar {
-      margin-top: 8px; height: 6px; border-radius: 999px;
-      background: #0a0c10; overflow: hidden;
-    }
-    .progress .bar > span {
-      display: block; height: 100%;
-      background: linear-gradient(90deg, var(--accent2), var(--accent));
-      transition: width .3s ease;
-    }
-    .progress .meta { color: var(--muted); font: 11px/1.4 var(--mono); margin-top: 6px; }
-    .runs {
-      margin-top: 8px;
-      max-height: 220px;
-      overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #10141a;
-    }
-    .run-item {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      align-items: center;
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--line);
-      font-size: 12px;
-    }
-    .run-item:last-child { border-bottom: 0; }
-    .run-item .meta { color: var(--muted); font: 11px/1.35 var(--mono); }
-    .run-item button { padding: 6px 10px; font-size: 12px; }
-    .run-ok { color: var(--ok); }
-    .run-warn { color: var(--warn); }
-    .run-bad { color: var(--err); }
+  /* ---------- header ---------- */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 22px; margin-bottom: 26px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(155deg, var(--accent-dim), #0d2530);
+    border: 1px solid var(--line);
+    display: grid; place-items: center;
+    color: var(--accent);
+  }
+  .brand h1 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: .01em; }
+  .brand p { margin: 1px 0 0; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 10px;
+    background: var(--panel);
+  }
+  .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2); }
+  .status-pill.idle .dot { background: var(--muted-2); }
+  .status-pill.running .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); animation: pulse 1.4s ease-in-out infinite; }
+  .status-pill.done .dot { background: var(--ok); }
+  .status-pill.error .dot { background: var(--err); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 
-    main {
-      display: grid;
-      grid-template-rows: 1fr 180px;
-      min-width: 0;
-    }
-    .viewer-wrap {
-      position: relative;
-      background: #0d1014;
-      border-bottom: 1px solid var(--line);
-    }
-    .viewer-wrap iframe {
-      position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
-    }
-    .viewer-empty {
-      position: absolute; inset: 0; display: grid; place-items: center;
-      color: var(--muted); font-size: 14px; text-align: center; padding: 24px;
-    }
-    .log {
-      margin: 0; padding: 12px 14px;
-      background: #0a0c10;
-      color: #b7c0cc;
-      font: 11.5px/1.45 var(--mono);
-      overflow: auto;
-      white-space: pre-wrap;
-    }
-    .file-btn { position: relative; overflow: hidden; }
-    .file-btn input {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer;
-    }
-  </style>
+  section { margin-bottom: 22px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .eyebrow {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--muted-2); font-weight: 650; margin: 0 0 12px;
+  }
+
+  /* ---------- dropzone / intake ---------- */
+  #dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 38px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  }
+  #dropzone.drag { border-color: var(--accent); background: #10202a; }
+  #dropzone .icon {
+    width: 46px; height: 46px; margin: 0 auto 14px;
+    border-radius: 12px; display: grid; place-items: center;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--accent);
+  }
+  #dropzone h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 600; }
+  #dropzone p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  #dropzone .browse { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  #fileInput { display: none; }
+
+  .picked-file {
+    display: none;
+    align-items: center; gap: 14px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px;
+    background: var(--panel-2);
+  }
+  .picked-file .icon {
+    width: 40px; height: 40px; border-radius: 10px; flex: none;
+    background: var(--ok-dim); color: var(--ok); display: grid; place-items: center;
+  }
+  .picked-file .meta { flex: 1; min-width: 0; }
+  .picked-file .name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picked-file .sub { font-size: 11.5px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .picked-file .swap {
+    font-size: 12px; color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .picked-file .swap:hover { color: var(--text); border-color: var(--accent-dim); }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .chip {
+    font-size: 12px; color: var(--muted); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+    cursor: pointer; font-family: var(--mono);
+    max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--accent-dim); color: var(--text); }
+  .chip.empty { cursor: default; }
+  .chip.empty:hover { border-color: var(--line); color: var(--muted); }
+
+  details.adv { margin-top: 16px; }
+  details.adv summary {
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+    list-style: none; display: flex; align-items: center; gap: 6px;
+  }
+  details.adv summary::-webkit-details-marker { display: none; }
+  details.adv summary .chev { transition: transform .15s; font-size: 10px; }
+  details.adv[open] summary .chev { transform: rotate(90deg); }
+  .adv-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-top: 12px; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+    background: #0e1116;
+  }
+  .adv-grid .full { grid-column: 1 / -1; }
+  .field label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-2); margin-bottom: 5px; }
+  .field select, .field input[type=text] {
+    width: 100%; background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; font: 12.5px var(--sans);
+  }
+  .field select:focus, .field input:focus { outline: none; border-color: var(--accent); }
+  .adv-checks { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .adv-checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .adv-checks input { accent-color: var(--accent); }
+
+  button.primary {
+    width: 100%; margin-top: 18px;
+    border: 0; border-radius: 10px; padding: 13px 16px;
+    font: 650 13.5px var(--sans); letter-spacing: .01em;
+    color: #04141c; cursor: pointer;
+    background: linear-gradient(180deg, #62d3ff, var(--accent));
+    box-shadow: 0 6px 20px -6px var(--accent-glow);
+    transition: transform .05s ease, opacity .15s, box-shadow .15s;
+  }
+  button.primary:hover { box-shadow: 0 8px 24px -6px var(--accent-glow); }
+  button.primary:active { transform: translateY(1px); }
+  button.primary:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+
+  button.ghost {
+    border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px;
+    font: 600 13px var(--sans); color: var(--text); background: var(--panel-2); cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--accent-dim); }
+  button.ghost:disabled { opacity: .4; cursor: not-allowed; }
+  button.godot {
+    border: 0; border-radius: 10px; padding: 12px 16px;
+    font: 650 13.5px var(--sans); color: #04140c; cursor: pointer;
+    background: linear-gradient(180deg, #57e8b0, var(--ok));
+    box-shadow: 0 6px 18px -8px rgba(61, 220, 151, .45);
+  }
+  button.godot:hover { filter: brightness(1.04); }
+  button.godot:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+  button.icon-btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+    border-radius: 8px; width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer;
+  }
+  button.icon-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+  /* ---------- stepper ---------- */
+  .stepper-rail {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 0;
+    position: relative;
+  }
+  .stepper-rail::before {
+    content: ""; position: absolute; left: 8%; right: 8%; top: 23px; height: 2px;
+    background: var(--line); z-index: 0;
+  }
+  .stage {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 0 4px;
+  }
+  .stage .ring {
+    width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--panel); border: 2px solid var(--line);
+    color: var(--muted-2); transition: all .2s ease;
+  }
+  .stage.running .ring {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 0 5px var(--accent-glow);
+    animation: ringpulse 1.3s ease-in-out infinite;
+  }
+  @keyframes ringpulse {
+    0%,100% { box-shadow: 0 0 0 4px var(--accent-glow); }
+    50% { box-shadow: 0 0 0 8px transparent; }
+  }
+  .stage.done .ring { border-color: var(--ok); background: var(--ok-dim); color: var(--ok); }
+  .stage.failed .ring { border-color: var(--err); background: var(--err-dim); color: var(--err); }
+  .stage .label { margin-top: 10px; font-size: 11.5px; font-weight: 600; color: var(--text); }
+  .stage .sub { margin-top: 3px; font-size: 10.5px; color: var(--muted); font-family: var(--mono); min-height: 13px; }
+  .stage.pending .label { color: var(--muted); }
+
+  details.log-details { margin-top: 20px; }
+  details.log-details summary {
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+    list-style: none; display: flex; align-items: center; gap: 6px;
+  }
+  details.log-details summary::-webkit-details-marker { display: none; }
+  pre.log {
+    margin: 10px 0 0; padding: 14px 16px; max-height: 260px; overflow: auto;
+    background: #070809; border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+    color: #9fb0c3; font: 11.5px/1.5 var(--mono); white-space: pre-wrap;
+  }
+
+  /* ---------- result ---------- */
+  .banner {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 20px; border-radius: var(--radius);
+    border: 1px solid var(--ok-dim); background: linear-gradient(180deg, #0f2318, #0d1a13);
+  }
+  .banner.fail { border-color: var(--err-dim); background: linear-gradient(180deg, #2a1418, #1a1013); }
+  .banner .bicon {
+    width: 42px; height: 42px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; background: var(--ok-dim); color: var(--ok);
+  }
+  .banner.fail .bicon { background: var(--err-dim); color: var(--err); }
+  .banner h2 { margin: 0; font-size: 15px; }
+  .banner p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px;
+  }
+  .stat {
+    border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px;
+    background: var(--panel-2);
+  }
+  .stat .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted-2); }
+  .stat .v { font-size: 21px; font-weight: 650; margin-top: 6px; font-family: var(--mono); }
+  .stat .v small { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .conf-bar { margin-top: 8px; height: 5px; border-radius: 999px; background: #0a0c10; overflow: hidden; }
+  .conf-bar > span { display: block; height: 100%; }
+
+  .warn-list {
+    margin-top: 14px; padding: 12px 14px; border-radius: var(--radius-sm);
+    background: var(--warn-dim); border: 1px solid #6a5420; font-size: 12px; color: #f0d9a0;
+  }
+  .warn-list summary { cursor: pointer; font-weight: 600; color: #f5c469; }
+
+  .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .actions > * { flex: 1; min-width: 180px; }
+  .actions .reset { flex: none; min-width: 0; }
+
+  .perf-table { margin-top: 16px; font-size: 12px; }
+  .perf-table summary { cursor: pointer; color: var(--muted); }
+  .perf-row {
+    display: flex; justify-content: space-between; padding: 6px 0;
+    border-bottom: 1px solid var(--line-soft); font-family: var(--mono); color: var(--muted);
+  }
+  .perf-row span:last-child { color: var(--text); }
+
+  /* ---------- recent runs ---------- */
+  .runs-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .run-row {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 11px 14px; background: var(--panel-2);
+  }
+  .run-row .dot2 { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .run-row .rmeta { flex: 1; min-width: 0; }
+  .run-row .rname { font-size: 12.5px; font-weight: 600; }
+  .run-row .rsub { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .run-row .ractions { display: flex; gap: 6px; }
+  .empty-note { font-size: 12.5px; color: var(--muted); padding: 6px 2px; }
+
+  [hidden] { display: none !important; }
+  svg { display: block; }
+</style>
 </head>
 <body>
-  <div class="app">
+  <div class="shell">
     <header>
-      <h1>CAD Robot Test <span>STEP → joints → viewer</span></h1>
-      <div id="badge" class="badge">hazır</div>
+      <div class="brand">
+        <div class="mark">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/>
+            <path d="M8 16.5 15.5 8.5" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div>
+          <h1>CAD Kinematics</h1>
+          <p>STEP → joint çıkarımı → Godot</p>
+        </div>
+      </div>
+      <div class="status-pill idle" id="statusPill"><span class="dot"></span><span id="statusText">hazır</span></div>
     </header>
 
-    <aside>
-      <label>Desktop / uploads STEP</label>
-      <select id="stepSelect">
-        <option value="">Yükleniyor…</option>
-      </select>
-
-      <label>veya yol yapıştır</label>
-      <input id="stepPath" type="text" placeholder="/Users/…/robot.step" />
-
-      <label>çalıştırma adı</label>
-      <input id="runName" type="text" placeholder="otomatik (dosya adı)" />
-
-      <label>mod</label>
-      <select id="runMode">
-        <option value="full">Tam pipeline (sıfırdan)</option>
-        <option value="package">Sadece package+validate (--from-stage package)</option>
-        <option value="meshes">Sadece meshes+validate (--from-stage meshes)</option>
-        <option value="validate">Sadece validate (--from-stage validate)</option>
-        <option value="joints">Joints’ten itibaren (--from-stage joints)</option>
-      </select>
-
-        <div class="checks">
-        <label><input type="checkbox" id="remeshChk" /> Remesh (GLB cache’i yok say, yeniden tessellate)</label>
-        <label><input type="checkbox" id="finalMeshChk" /> Final meshes (ince kalite)</label>
-        <label><input type="checkbox" id="forceChk" /> Force (tüm stage cache yok say)</label>
-      </div>
-
-      <div class="row" style="margin-top:14px">
-        <button class="btn-ghost file-btn" type="button">
-          Dosya yükle
-          <input id="fileInput" type="file" accept=".step,.stp,.STEP,.STP" />
-        </button>
-        <button class="btn-ghost" id="refreshBtn" type="button">Listeyi yenile</button>
-      </div>
-
-      <button class="btn-primary" id="runBtn" type="button">Pipeline çalıştır</button>
-      <p class="hint">Godot CAD = robot.json + meshes/. Joint/pivot iterasyonunda mevcut GLB cache kullanılır; yalnızca STEP/topoloji değişince veya Remesh ile yeniden üretilir.</p>
-
-      <div class="progress" id="progressBox" style="display:none">
-        <div id="progressLabel">Hazırlanıyor…</div>
-        <div class="bar"><span id="progressBar" style="width:0%"></span></div>
-        <div class="meta" id="progressMeta"></div>
-      </div>
-
-      <label>önceki koşular (sadece preview)</label>
-      <div class="runs" id="runsList">
-        <div class="run-item"><span class="meta">Yükleniyor…</span></div>
-      </div>
-
-      <div class="summary" id="summary">Henüz koşu yok.</div>
-    </aside>
-
     <main>
-      <div class="viewer-wrap">
-        <div class="viewer-empty" id="viewerEmpty">Pipeline bitince veya önceki koşuyu açınca 3D burada görünür.<br/>Önce rest pose’a bak, sonra joint hareketini aç.</div>
-        <iframe id="viewerFrame" title="viewer" style="display:none"></iframe>
-      </div>
-      <pre class="log" id="log">Log bekleniyor…</pre>
+      <!-- ===== INTAKE ===== -->
+      <section id="intakeSection">
+        <div id="dropzone">
+          <div class="icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 3v12" stroke-linecap="round"/><path d="M7 10l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>STEP dosyasını buraya sürükle</h3>
+          <p>veya <span class="browse">gözat</span> — .step / .stp</p>
+          <input id="fileInput" type="file" accept=".step,.stp,.STEP,.STP" />
+        </div>
+
+        <div class="picked-file" id="pickedFile">
+          <div class="icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>
+            </svg>
+          </div>
+          <div class="meta">
+            <div class="name" id="pickedName">—</div>
+            <div class="sub" id="pickedSub">—</div>
+          </div>
+          <button class="swap" id="swapBtn" type="button">Değiştir</button>
+        </div>
+
+        <div class="chips" id="recentChips"><span class="chip empty">STEP dosyaları taranıyor…</span></div>
+
+        <details class="adv">
+          <summary><span class="chev">▸</span> Gelişmiş seçenekler</summary>
+          <div class="adv-grid">
+            <div class="field">
+              <label>Çalıştırma adı</label>
+              <input id="runName" type="text" placeholder="otomatik (dosya adı)" />
+            </div>
+            <div class="field">
+              <label>Mod</label>
+              <select id="runMode">
+                <option value="full">Tam pipeline</option>
+                <option value="package">--from-stage package</option>
+                <option value="meshes">--from-stage meshes</option>
+                <option value="validate">--from-stage validate</option>
+                <option value="joints">--from-stage joints</option>
+              </select>
+            </div>
+            <div class="field full">
+              <div class="adv-checks">
+                <label><input type="checkbox" id="remeshChk" /> Remesh (GLB cache yok say)</label>
+                <label><input type="checkbox" id="finalMeshChk" /> Final mesh (ince kalite)</label>
+                <label><input type="checkbox" id="forceChk" /> Force (tüm cache yok say)</label>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <button class="primary" id="runBtn" type="button" disabled>Pipeline'ı Çalıştır</button>
+      </section>
+
+      <!-- ===== STEPPER ===== -->
+      <section id="stepperSection" hidden>
+        <div class="card">
+          <div class="eyebrow" id="stepperEyebrow">Analiz ediliyor</div>
+          <div class="stepper-rail" id="stepperRail"></div>
+          <details class="log-details">
+            <summary><span class="chev">▸</span> Ayrıntılı log</summary>
+            <pre class="log" id="log"></pre>
+          </details>
+        </div>
+      </section>
+
+      <!-- ===== RESULT ===== -->
+      <section id="resultSection" hidden>
+        <div class="banner" id="banner">
+          <div class="bicon" id="bannerIcon"></div>
+          <div>
+            <h2 id="bannerTitle">Robot oluşturuldu</h2>
+            <p id="bannerSub">—</p>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="statGrid"></div>
+
+        <details class="warn-list" id="warnBox" hidden>
+          <summary id="warnSummary">Uyarılar</summary>
+          <div id="warnBody" style="margin-top:8px"></div>
+        </details>
+
+        <div class="actions">
+          <button class="godot" id="openGodotBtn" type="button">Godot'ta Aç</button>
+          <button class="ghost" id="openBrowserBtn" type="button">Tarayıcıda Önizle</button>
+          <button class="ghost reset" id="newRunBtn" type="button">Yeni Analiz</button>
+        </div>
+
+        <details class="perf-table">
+          <summary>Aşama süreleri</summary>
+          <div id="perfBody" style="margin-top:8px"></div>
+        </details>
+      </section>
+
+      <!-- ===== RECENT RUNS ===== -->
+      <section id="recentSection">
+        <div class="card">
+          <div class="eyebrow">Önceki koşular</div>
+          <div class="runs-list" id="runsList"><div class="empty-note">Yükleniyor…</div></div>
+        </div>
+      </section>
     </main>
   </div>
 
-  <script>
-    const stepSelect = document.getElementById("stepSelect");
-    const stepPath = document.getElementById("stepPath");
-    const runName = document.getElementById("runName");
-    const runMode = document.getElementById("runMode");
-    const remeshChk = document.getElementById("remeshChk");
-    const finalMeshChk = document.getElementById("finalMeshChk");
-    const forceChk = document.getElementById("forceChk");
-    const runBtn = document.getElementById("runBtn");
-    const refreshBtn = document.getElementById("refreshBtn");
-    const fileInput = document.getElementById("fileInput");
-    const logEl = document.getElementById("log");
-    const summary = document.getElementById("summary");
-    const badge = document.getElementById("badge");
-    const viewerFrame = document.getElementById("viewerFrame");
-    const viewerEmpty = document.getElementById("viewerEmpty");
-    const runsList = document.getElementById("runsList");
-    const progressBox = document.getElementById("progressBox");
-    const progressLabel = document.getElementById("progressLabel");
-    const progressBar = document.getElementById("progressBar");
-    const progressMeta = document.getElementById("progressMeta");
+<script>
+  // ---------------------------------------------------------------------
+  // Stage model: maps the pipeline's real manifest stage keys / perf-span
+  // names (both already produced by pipeline.py, untouched here) onto the
+  // 6 cards the UI shows. Nothing here computes kinematics or timing —
+  // it only reads out/*/manifest.json and out/*/performance_summary.json.
+  // ---------------------------------------------------------------------
+  const STAGE_DEFS = [
+    { key: "import",    label: "Import",             manifestKeys: ["ingest"],            perfNames: ["STEP import", "OCC analysis"],
+      icon: '<path d="M12 3v10" stroke-linecap="round"/><path d="M7.5 9.5 12 14l4.5-4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17.5v1.5a2 2 0 002 2h12a2 2 0 002-2v-1.5" stroke-linecap="round"/>',
+      meta: s => s?.n_parts != null ? `${s.n_parts} parça` : "" },
+    { key: "features",  label: "Feature Extraction", manifestKeys: ["features"],           perfNames: ["Feature extraction"],
+      icon: '<rect x="4" y="4" width="7" height="7" rx="1.3"/><rect x="13" y="4" width="7" height="7" rx="1.3"/><rect x="4" y="13" width="7" height="7" rx="1.3"/><rect x="13" y="13" width="7" height="7" rx="1.3"/>',
+      meta: s => s?.n_cylinders != null ? `${s.n_cylinders} silindir` : "" },
+    { key: "joints",    label: "Joint Inference",    manifestKeys: ["joints"],             perfNames: ["Joint inference"],
+      icon: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M7.6 16.4 16.4 7.6" stroke-linecap="round"/>',
+      meta: s => s?.n_selected != null ? `${s.n_selected} joint seçildi` : "" },
+    { key: "hierarchy", label: "Hierarchy",          manifestKeys: ["hierarchy", "package"], perfNames: ["Hierarchy", "Index/package"],
+      icon: '<circle cx="12" cy="4.5" r="1.8"/><circle cx="6" cy="12" r="1.8"/><circle cx="18" cy="12" r="1.8"/><circle cx="6" cy="19.5" r="1.8"/><path d="M12 6.3V10M10.6 10.9 6.9 10.6M13.4 10.9l3.7-.3M6 13.8v3.9" stroke-linecap="round"/>',
+      meta: s => s?.n_joints != null ? `taban: ${s.base || "?"}` : "" },
+    { key: "mesh",      label: "Mesh Export",        manifestKeys: ["meshes"],             perfNames: ["Mesh generation", "GLB export"],
+      icon: '<path d="M12 3 20 7.5v9L12 21 4 16.5v-9z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5" stroke-linecap="round" stroke-linejoin="round"/>',
+      meta: s => s?.n_meshes != null ? `${s.n_meshes} mesh` : "" },
+    { key: "validate",  label: "Validation",         manifestKeys: ["validate"],           perfNames: ["Validation"],
+      icon: '<path d="M12 3 4.5 6v6c0 4.5 3.2 7 7.5 9 4.3-2 7.5-4.5 7.5-9V6z"/><path d="M8.5 12.2l2.4 2.4 4.6-5" stroke-linecap="round" stroke-linejoin="round"/>',
+      meta: s => "" },
+  ];
 
-    let logOffset = 0;
-    let polling = null;
-    let activeRunId = null;
-    let watchingRun = false;
+  const $ = (id) => document.getElementById(id);
+  const dropzone = $("dropzone"), fileInput = $("fileInput"), pickedFile = $("pickedFile");
+  const pickedName = $("pickedName"), pickedSub = $("pickedSub"), swapBtn = $("swapBtn");
+  const recentChips = $("recentChips");
+  const runBtn = $("runBtn"), runName = $("runName"), runMode = $("runMode");
+  const remeshChk = $("remeshChk"), finalMeshChk = $("finalMeshChk"), forceChk = $("forceChk");
+  const intakeSection = $("intakeSection"), stepperSection = $("stepperSection"), resultSection = $("resultSection");
+  const stepperRail = $("stepperRail"), stepperEyebrow = $("stepperEyebrow"), logEl = $("log");
+  const banner = $("banner"), bannerIcon = $("bannerIcon"), bannerTitle = $("bannerTitle"), bannerSub = $("bannerSub");
+  const statGrid = $("statGrid"), warnBox = $("warnBox"), warnSummary = $("warnSummary"), warnBody = $("warnBody");
+  const openGodotBtn = $("openGodotBtn"), openBrowserBtn = $("openBrowserBtn"), newRunBtn = $("newRunBtn");
+  const perfBody = $("perfBody");
+  const runsList = $("runsList");
+  const statusPill = $("statusPill"), statusText = $("statusText");
 
-    function basename(p) {
-      if (!p) return "—";
-      return String(p).split("/").pop();
+  let selectedPath = "";
+  let logOffset = 0, polling = null, activeRunId = null, watchingRun = false;
+  let currentOut = null;
+
+  const ICON = {
+    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>',
+    spinner: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3a9 9 0 100 18" stroke-linecap="round"/></svg>',
+  };
+
+  function basename(p) { return p ? String(p).split("/").pop() : "—"; }
+  function fmtBytes(mb) { return mb == null ? "" : (mb < 1 ? Math.round(mb * 1024) + " KB" : mb.toFixed(1) + " MB"); }
+
+  function setStatusPill(status) {
+    statusPill.className = "status-pill " + (status || "idle");
+    const labels = { idle: "hazır", running: "çalışıyor", done: "tamamlandı", error: "hata", stale: "kesildi" };
+    statusText.textContent = labels[status] || "hazır";
+  }
+
+  // ---------------- intake ----------------
+  function selectFile(path, label) {
+    selectedPath = path;
+    dropzone.style.display = "none";
+    pickedFile.style.display = "flex";
+    pickedName.textContent = basename(path);
+    pickedSub.textContent = label || path;
+    if (!runName.value) runName.placeholder = basename(path).replace(/\.(step|stp)$/i, "");
+    runBtn.disabled = false;
+  }
+  function clearFile() {
+    selectedPath = "";
+    dropzone.style.display = "block";
+    pickedFile.style.display = "none";
+    runBtn.disabled = true;
+  }
+  swapBtn.addEventListener("click", clearFile);
+  dropzone.addEventListener("click", () => fileInput.click());
+  ["dragenter", "dragover"].forEach(ev => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add("drag"); }));
+  ["dragleave", "drop"].forEach(ev => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove("drag"); }));
+  dropzone.addEventListener("drop", async (e) => {
+    const f = e.dataTransfer?.files?.[0];
+    if (f) await uploadFile(f);
+  });
+  fileInput.addEventListener("change", async () => {
+    const f = fileInput.files?.[0];
+    if (f) await uploadFile(f);
+  });
+
+  async function uploadFile(f) {
+    if (!/\.(step|stp)$/i.test(f.name)) {
+      alert("Sadece .step / .stp dosyaları desteklenir.");
+      return;
+    }
+    const fd = new FormData();
+    fd.append("file", f);
+    pickedName.textContent = "Yükleniyor…";
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) { alert("Yükleme hatası: " + (data.error || res.status)); return; }
+    selectFile(data.path, `${fmtBytes(f.size / (1024 * 1024))} · yüklendi`);
+    loadSteps();
+  }
+
+  async function loadSteps() {
+    const data = await (await fetch("/api/steps")).json();
+    const steps = (data.steps || []).slice(0, 8);
+    if (!steps.length) {
+      recentChips.innerHTML = '<span class="chip empty">Desktop içinde .step/.stp bulunamadı</span>';
+      return;
+    }
+    recentChips.innerHTML = "";
+    for (const s of steps) {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = `${s.name} · ${s.size_mb} MB`;
+      chip.title = s.path;
+      chip.addEventListener("click", () => selectFile(s.path, `${s.size_mb} MB · ${s.folder}`));
+      recentChips.appendChild(chip);
+    }
+  }
+
+  // ---------------- stepper ----------------
+  function renderStepper() {
+    stepperRail.innerHTML = "";
+    for (const def of STAGE_DEFS) {
+      const el = document.createElement("div");
+      el.className = "stage pending";
+      el.id = "stage-" + def.key;
+      el.innerHTML = `
+        <div class="ring">${ICON.check.replace("<svg", '<svg class="ic-done"').replace(/stroke-width="2.2"/, 'stroke-width="2.4" style="display:none"')}
+          <svg class="ic-run" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><g><path d="M12 3a9 9 0 100 18" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></path></g></svg>
+          <svg class="ic-pending" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${def.icon}</svg>
+        </div>
+        <div class="label">${def.label}</div>
+        <div class="sub" id="sub-${def.key}"></div>`;
+      stepperRail.appendChild(el);
+    }
+  }
+
+  function setStageState(key, state, sub) {
+    const el = $("stage-" + key);
+    if (!el) return;
+    el.className = "stage " + state;
+    el.querySelector(".ic-done").style.display = state === "done" ? "block" : "none";
+    el.querySelector(".ic-run").style.display = state === "running" ? "block" : "none";
+    el.querySelector(".ic-pending").style.display = (state === "pending" || state === "failed") ? "block" : "none";
+    if (sub != null) $("sub-" + key).textContent = sub;
+  }
+
+  function updateStepperFromProgress(progress, errored) {
+    const stages = progress?.stages || {};
+    let failedAssigned = false;
+    for (const def of STAGE_DEFS) {
+      const sts = def.manifestKeys.map(k => (stages[k] || {}).status || null);
+      let state = "pending";
+      if (sts.every(s => s === "done")) state = "done";
+      else if (sts.some(s => s === "running") || def.manifestKeys.includes(progress?.current)) state = "running";
+      else if (sts.some(s => s === "done")) state = "running";
+      if (errored && state === "running" && !failedAssigned) { state = "failed"; failedAssigned = true; }
+      let sub = "";
+      const doneMeta = def.manifestKeys.map(k => (stages[k] || {}).meta).find(Boolean);
+      if (state === "done" && doneMeta) sub = def.meta(doneMeta) || "hazır";
+      else if (state === "running") sub = "işleniyor…";
+      setStageState(def.key, state, sub);
+    }
+  }
+
+  function applyPerfToStepper(spans) {
+    if (!spans || !spans.length) return;
+    const byName = {};
+    for (const s of spans) byName[s.name] = s;
+    for (const def of STAGE_DEFS) {
+      const total = def.perfNames.reduce((acc, n) => acc + (byName[n]?.seconds || 0), 0);
+      const done = document.querySelector(`#stage-${def.key}`);
+      if (done) setStageState(def.key, "done", `${total < 1 ? Math.round(total * 1000) + "ms" : total.toFixed(1) + "s"}`);
+    }
+  }
+
+  // ---------------- result panel ----------------
+  function confColor(c) {
+    if (c == null) return "var(--muted-2)";
+    if (c >= 0.8) return "var(--ok)";
+    if (c >= 0.5) return "var(--warn)";
+    return "var(--err)";
+  }
+
+  function renderResult(st) {
+    const s = st.summary || {};
+    currentOut = st.out || null;
+    const ok = s.validation_ok !== false;
+    banner.className = "banner" + (ok ? "" : " fail");
+    bannerIcon.innerHTML = ok ? ICON.check : ICON.x;
+    bannerTitle.textContent = ok ? "Robot başarıyla oluşturuldu" : "Doğrulama başarısız";
+    bannerSub.textContent = `${basename(s.source || st.step)} → ${st.out || "—"}`;
+
+    const conf = s.confidence != null ? Number(s.confidence) : null;
+    const confPct = conf != null ? Math.round(conf * 100) : 0;
+    const warnCount = Array.isArray(s.warnings) ? s.warnings.length : 0;
+
+    statGrid.innerHTML = `
+      <div class="stat"><div class="k">Link</div><div class="v">${s.links ?? "—"}</div></div>
+      <div class="stat"><div class="k">Joint</div><div class="v">${s.joints ?? "—"} <small>(${s.movable ?? "—"} hareketli)</small></div></div>
+      <div class="stat">
+        <div class="k">Confidence</div>
+        <div class="v" style="color:${confColor(conf)}">${conf != null ? conf.toFixed(2) : "—"}</div>
+        <div class="conf-bar"><span style="width:${confPct}%;background:${confColor(conf)}"></span></div>
+      </div>
+      <div class="stat"><div class="k">Uyarı</div><div class="v" style="color:${warnCount ? "var(--warn)" : "var(--text)"}">${warnCount}</div></div>
+    `;
+
+    if (warnCount) {
+      warnBox.hidden = false;
+      warnSummary.textContent = `${warnCount} uyarı`;
+      warnBody.innerHTML = s.warnings.slice(0, 8).map(w =>
+        `<div style="padding:3px 0">· ${typeof w === "string" ? w : JSON.stringify(w)}</div>`
+      ).join("");
+    } else {
+      warnBox.hidden = true;
     }
 
-    function setBadge(status) {
-      badge.className = "badge";
-      if (status === "running") { badge.classList.add("run"); badge.textContent = "çalışıyor"; }
-      else if (status === "done") { badge.classList.add("ok"); badge.textContent = "bitti"; }
-      else if (status === "error" || status === "stale") { badge.classList.add("err"); badge.textContent = status === "stale" ? "kesildi" : "hata"; }
-      else { badge.textContent = "hazır"; }
-    }
+    perfBody.innerHTML = (s.perf || []).map(p =>
+      `<div class="perf-row"><span>${p.name}${p.note ? " (" + p.note + ")" : ""}</span><span>${p.display}</span></div>`
+    ).join("") || '<div class="empty-note">Süre verisi yok.</div>';
 
-    function hideViewer() {
-      viewerFrame.style.display = "none";
-      viewerFrame.removeAttribute("src");
-      viewerEmpty.style.display = "grid";
-    }
+    openGodotBtn.disabled = !currentOut;
+    openBrowserBtn.disabled = !currentOut;
+  }
 
-    function showProgress(st) {
-      const p = st.progress || {};
-      const total = p.total || 6;
-      const done = p.done_count || (p.done ? p.done.length : 0);
-      const pct = Math.round((done / total) * 100);
-      progressBox.style.display = "block";
-      progressLabel.textContent = st.running
-        ? `Aşama: ${p.current || "…"} (${done}/${total})`
-        : "Bekleniyor…";
-      progressBar.style.width = pct + "%";
-      progressMeta.textContent =
-        `STEP: ${basename(st.step)}\n` +
-        `out: ${st.out || "—"}` +
-        (st.final_meshes ? "\nfinal meshes" :
-          (st.remesh ? "\nremesh (force tessellate)" : "\nGLB cache (joint edit → reuse meshes)"));
-    }
-
-    function hideProgress() {
-      progressBox.style.display = "none";
-    }
-
-    function fmtSummary(st) {
-      const s = st.summary || {};
-      const conf = s.confidence != null ? Number(s.confidence).toFixed(3) : "—";
-      const warns = Array.isArray(s.warnings) ? s.warnings.length : (s.warnings ?? "—");
-      let text =
-        `source: ${basename(s.source || st.step)}\n` +
-        `out: ${st.out || "—"}\n` +
-        `links: ${s.links ?? "—"} · joints: ${s.joints ?? "—"} · movable: ${s.movable ?? "—"}\n` +
-        `validation: ${s.validation_ok ?? "—"} · conf: ${conf} · warnings: ${warns}\n` +
-        `fk: ${s.fk_ok ?? "—"} · chain_err: ${s.chain_errors ?? "—"} · godot: ${s.godot_ok ?? "—"}\n` +
-        `frame: ${s.frame ?? "—"} · base: ${s.base ?? "—"}`;
-      if (Array.isArray(s.warnings) && s.warnings.length) {
-        text += "\n\n" + s.warnings.slice(0, 6).map((w) => "· " + (typeof w === "string" ? w : JSON.stringify(w))).join("\n");
-      }
-      return text;
-    }
-
-    function showViewer(url) {
-      if (!url) return;
-      viewerEmpty.style.display = "none";
-      viewerFrame.style.display = "block";
-      viewerFrame.src = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
-    }
-
-    async function loadSteps() {
-      const res = await fetch("/api/steps");
-      const data = await res.json();
-      const cur = stepPath.value;
-      stepSelect.innerHTML = '<option value="">— STEP seç —</option>';
-      for (const s of data.steps || []) {
-        const opt = document.createElement("option");
-        opt.value = s.path;
-        opt.textContent = `${s.name}  (${s.size_mb} MB)`;
-        stepSelect.appendChild(opt);
-      }
-      if (cur) stepSelect.value = cur;
-    }
-
-    async function loadRuns() {
-      const res = await fetch("/api/runs");
-      const data = await res.json();
-      const runs = data.runs || [];
-      if (!runs.length) {
-        runsList.innerHTML = '<div class="run-item"><span class="meta">Henüz out/ altında koşu yok.</span></div>';
-        return;
-      }
-      runsList.innerHTML = "";
-      for (const r of runs) {
-        const row = document.createElement("div");
-        row.className = "run-item";
-        const conf = r.confidence != null ? Number(r.confidence).toFixed(2) : "—";
-        let cls = "run-warn";
-        if (r.validation_ok === true) cls = "run-ok";
-        if (r.validation_ok === false) cls = "run-bad";
-        const left = document.createElement("div");
-        const src = basename(r.source);
-        left.innerHTML =
-          `<strong>${r.name}</strong>` +
-          `<div class="meta ${cls}">${src ? src + " · " : ""}L${r.links ?? "?"} J${r.joints ?? "?"} · conf ${conf} · warn ${r.warnings ?? "?"}</div>`;
-        const btn = document.createElement("button");
-        btn.className = "btn-ghost";
-        btn.type = "button";
-        btn.textContent = "Aç";
-        btn.addEventListener("click", () => previewRun(r.out));
-        row.appendChild(left);
-        row.appendChild(btn);
-        runsList.appendChild(row);
-      }
-    }
-
-    async function previewRun(out) {
-      summary.textContent = "Viewer’a kopyalanıyor…";
-      const res = await fetch("/api/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ out }),
+  openGodotBtn.addEventListener("click", async () => {
+    if (!currentOut) return;
+    openGodotBtn.disabled = true;
+    const prevText = openGodotBtn.textContent;
+    openGodotBtn.textContent = "Godot açılıyor…";
+    try {
+      const res = await fetch("/api/open_godot", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ out: currentOut }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        summary.textContent = data.error || "Preview açılamadı";
-        setBadge(res.status === 409 ? "running" : "error");
-        return;
-      }
-      watchingRun = false;
-      activeRunId = null;
-      setBadge("done");
-      summary.textContent = fmtSummary({ out, summary: data.summary });
-      showViewer(data.url);
-      hideProgress();
-      await loadRuns();
+      if (!res.ok) { alert(data.error || "Godot açılamadı"); }
+    } catch (e) { alert(String(e)); }
+    setTimeout(() => { openGodotBtn.textContent = prevText; openGodotBtn.disabled = false; }, 1800);
+  });
+
+  openBrowserBtn.addEventListener("click", async () => {
+    if (!currentOut) return;
+    const res = await fetch("/api/preview", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ out: currentOut }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Önizleme açılamadı"); return; }
+    window.open(data.url, "_blank");
+  });
+
+  newRunBtn.addEventListener("click", () => {
+    resultSection.hidden = true;
+    intakeSection.hidden = false;
+    clearFile();
+    setStatusPill("idle");
+    loadRuns();
+  });
+
+  // ---------------- recent runs ----------------
+  async function loadRuns() {
+    const data = await (await fetch("/api/runs")).json();
+    const runs = data.runs || [];
+    if (!runs.length) {
+      runsList.innerHTML = '<div class="empty-note">Henüz koşu yok — bir STEP seç ve çalıştır.</div>';
+      return;
+    }
+    runsList.innerHTML = "";
+    for (const r of runs) {
+      const row = document.createElement("div");
+      row.className = "run-row";
+      const conf = r.confidence != null ? Number(r.confidence).toFixed(2) : "—";
+      let dotColor = "var(--muted-2)";
+      if (r.validation_ok === true) dotColor = "var(--ok)";
+      if (r.validation_ok === false) dotColor = "var(--err)";
+      row.innerHTML = `
+        <span class="dot2" style="background:${dotColor}"></span>
+        <div class="rmeta">
+          <div class="rname">${r.name}</div>
+          <div class="rsub">${basename(r.source) || "—"} · L${r.links ?? "?"} J${r.joints ?? "?"} · conf ${conf}</div>
+        </div>
+        <div class="ractions">
+          <button class="icon-btn" title="Tarayıcıda aç" data-act="preview">${'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z"/><circle cx="12" cy="12" r="2.6"/></svg>'}</button>
+          <button class="icon-btn" title="Godot'ta aç" data-act="godot">${'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M7.5 16.5 16.5 7.5" stroke-linecap="round"/></svg>'}</button>
+        </div>`;
+      row.querySelector('[data-act="preview"]').addEventListener("click", async () => {
+        const res = await fetch("/api/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ out: r.out }) });
+        const data = await res.json();
+        if (res.ok) window.open(data.url, "_blank"); else alert(data.error || "Açılamadı");
+      });
+      row.querySelector('[data-act="godot"]').addEventListener("click", async () => {
+        const res = await fetch("/api/open_godot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ out: r.out }) });
+        const data = await res.json();
+        if (!res.ok) alert(data.error || "Godot açılamadı");
+      });
+      runsList.appendChild(row);
+    }
+  }
+
+  // ---------------- run + poll ----------------
+  runBtn.addEventListener("click", async () => {
+    if (!selectedPath) return;
+    const mode = runMode.value;
+    const from_stage = mode === "full" ? undefined : mode;
+    logOffset = 0;
+    logEl.textContent = "";
+    intakeSection.hidden = true;
+    resultSection.hidden = true;
+    stepperSection.hidden = false;
+    stepperEyebrow.textContent = "Analiz ediliyor";
+    renderStepper();
+    setStatusPill("running");
+
+    const res = await fetch("/api/run", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: selectedPath,
+        name: runName.value.trim() || undefined,
+        from_stage,
+        remesh: remeshChk.checked,
+        final_meshes: finalMeshChk.checked,
+        force: forceChk.checked,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      stepperSection.hidden = true;
+      intakeSection.hidden = false;
+      alert(data.error || "Çalıştırılamadı");
+      setStatusPill("error");
+      return;
+    }
+    startPolling(data.run_id);
+  });
+
+  function startPolling(runId) {
+    activeRunId = runId || null;
+    watchingRun = true;
+    if (polling) clearInterval(polling);
+    polling = setInterval(poll, 800);
+    poll();
+  }
+
+  async function poll() {
+    const st = await (await fetch("/api/status")).json();
+    setStatusPill(st.status || "idle");
+
+    if (st.running) {
+      stepperSection.hidden = false;
+      intakeSection.hidden = true;
+      updateStepperFromProgress(st.progress, false);
     }
 
-    stepSelect.addEventListener("change", () => {
-      if (stepSelect.value) {
-        stepPath.value = stepSelect.value;
-        if (!runName.value) {
-          const base = stepSelect.value.split("/").pop().replace(/\.(step|stp)$/i, "");
-          runName.placeholder = base;
-        }
-      }
-    });
+    const log = await (await fetch("/api/log?offset=" + logOffset)).json();
+    if (log.text) {
+      logEl.textContent += log.text;
+      logOffset = log.offset;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
 
-    refreshBtn.addEventListener("click", async () => {
-      await Promise.all([loadSteps(), loadRuns()]);
-    });
+    const matchesRun = !activeRunId || st.run_id === activeRunId || (watchingRun && st.running);
 
-    fileInput.addEventListener("change", async () => {
-      const f = fileInput.files?.[0];
-      if (!f) return;
-      const fd = new FormData();
-      fd.append("file", f);
-      summary.textContent = "Yükleniyor…";
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        summary.textContent = "Yükleme hatası: " + (data.error || res.status);
-        return;
-      }
-      stepPath.value = data.path;
-      await loadSteps();
-      stepSelect.value = data.path;
-      summary.textContent = "Yüklendi: " + data.name;
-    });
-
-    async function poll() {
-      const st = await (await fetch("/api/status")).json();
-      setBadge(st.status || "idle");
-      runBtn.disabled = !!st.running;
-
-      if (st.running) {
-        showProgress(st);
-        if (st.orphan && !polling) {
-          watchingRun = true;
-          activeRunId = st.run_id || null;
-          summary.textContent = `Devam eden koşu (UI yeniden bağlandı) → ${st.out || "?"}\nSTEP: ${basename(st.step)}`;
-          startPolling(st.run_id);
-        }
-      }
-
-      const log = await (await fetch("/api/log?offset=" + logOffset)).json();
-      if (log.text) {
-        if (logOffset === 0) logEl.textContent = log.text;
-        else logEl.textContent += log.text;
-        logOffset = log.offset;
-        logEl.scrollTop = logEl.scrollHeight;
-      }
-
-      const matchesRun = !activeRunId || st.run_id === activeRunId || (watchingRun && st.running);
-
-      if (st.status === "done" && st.summary && matchesRun && !st.preview_only) {
-        summary.textContent = fmtSummary(st);
-        if (st.viewer_url) showViewer(st.viewer_url);
-        hideProgress();
+    if (st.status === "done" && st.summary && matchesRun && !st.preview_only) {
+      updateStepperFromProgress(st.progress, false);
+      applyPerfToStepper(st.summary.perf);
+      setTimeout(() => {
+        stepperSection.hidden = true;
+        resultSection.hidden = false;
+        renderResult(st);
         loadRuns();
-      }
-      if ((st.status === "error" || st.status === "stale") && matchesRun) {
-        summary.textContent = (st.status === "stale" ? "Koşu kesildi" : "Hata") + " — log’a bak.\n" + (st.error || ("exit " + st.exit_code));
-        hideProgress();
-      }
-      if (!st.running) {
-        if (polling) { clearInterval(polling); polling = null; }
-        if (!st.running && st.status !== "running") hideProgress();
-      }
+      }, 450);
+      clearInterval(polling); polling = null;
     }
-
-    function startPolling(runId) {
-      activeRunId = runId || null;
-      watchingRun = true;
-      if (polling) clearInterval(polling);
-      polling = setInterval(poll, 800);
-      poll();
+    if ((st.status === "error" || st.status === "stale") && matchesRun) {
+      updateStepperFromProgress(st.progress, true);
+      stepperEyebrow.textContent = st.status === "stale" ? "Koşu kesildi" : "Hata";
+      if (polling) { clearInterval(polling); polling = null; }
     }
+  }
 
-    runBtn.addEventListener("click", async () => {
-      const path = stepPath.value.trim();
-      if (!path) {
-        summary.textContent = "Önce bir STEP seç veya yol yapıştır.";
-        return;
-      }
-      const mode = runMode.value;
-      const from_stage = mode === "full" ? undefined : mode;
-      logOffset = 0;
-      logEl.textContent = "";
-      summary.textContent = "Başlatılıyor…";
-      setBadge("running");
-      runBtn.disabled = true;
-      hideViewer();
-      viewerEmpty.textContent = "Yeni koşu çalışıyor — bitince sonuç burada açılır.\nEski viewer gizlendi (karışmasın diye).";
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          path,
-          name: runName.value.trim() || undefined,
-          from_stage,
-          remesh: remeshChk.checked,
-          final_meshes: finalMeshChk.checked,
-          force: forceChk.checked,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        summary.textContent = data.error || "Çalıştırılamadı";
-        setBadge("error");
-        runBtn.disabled = false;
-        return;
-      }
-      let msg = `Çalışıyor → ${data.out}`;
-      if (data.note) msg += `\n${data.note}`;
-      summary.textContent = msg;
-      if (data.name) runName.placeholder = data.name;
-      startPolling(data.run_id);
-    });
-
-    async function boot() {
-      await Promise.all([loadSteps(), loadRuns()]);
-      const st = await (await fetch("/api/status")).json();
-      if (st.running) {
-        watchingRun = true;
-        activeRunId = st.run_id || null;
-        summary.textContent =
-          (st.orphan ? "Devam eden koşu (UI yeniden bağlandı)" : "Devam eden koşu") +
-          ` → ${st.out || "?"}\nSTEP: ${basename(st.step)}`;
-        startPolling(st.run_id);
-      } else {
-        poll();
-      }
+  async function boot() {
+    renderStepper();
+    await Promise.all([loadSteps(), loadRuns()]);
+    const st = await (await fetch("/api/status")).json();
+    if (st.running) {
+      stepperSection.hidden = false;
+      intakeSection.hidden = true;
+      setStatusPill("running");
+      startPolling(st.run_id);
+    } else {
+      setStatusPill(st.status === "done" ? "idle" : (st.status || "idle"));
     }
+  }
 
-    boot();
-  </script>
+  boot();
+</script>
 </body>
 </html>

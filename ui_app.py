@@ -35,6 +35,8 @@ DEFAULT_PROGRESS_STAGES = ("ingest", "features", "joints", "hierarchy", "package
 _lock = threading.Lock()
 _proc: subprocess.Popen | None = None
 _viewer_proc: subprocess.Popen | None = None
+_godot_proc: subprocess.Popen | None = None
+GODOT_LOG_PATH = ROOT / "out" / "_ui_godot_launch.log"
 
 
 def _safe_name(s: str) -> str:
@@ -102,7 +104,23 @@ def _progress_from_manifest(out_dir: Path) -> dict:
         "current": current,
         "total": len(order),
         "done_count": len(done),
+        # Raw per-stage manifest entries (status/meta/updated_at) so the UI can
+        # show live detail (e.g. "5 joints selected") without re-deriving it.
+        "stages": stages,
     }
+
+
+def _perf_spans(out_dir: Path) -> list[dict]:
+    """Read the pipeline's own performance_summary.json (already written by
+    pipeline.py) for real per-stage timing — purely a read of an existing
+    artifact, no timing logic lives in the UI."""
+    p = out_dir / "performance_summary.json"
+    if not p.is_file():
+        return []
+    try:
+        return (json.loads(p.read_text()) or {}).get("spans") or []
+    except Exception:
+        return []
 
 
 def _recorded_source(out_dir: Path) -> str | None:
@@ -333,6 +351,7 @@ def _summarize_out(out_dir: Path) -> dict:
         summary["godot_ok"] = m.get("godot_runtime_ok")
     except Exception:
         pass
+    summary["perf"] = _perf_spans(out_dir)
     return summary
 
 
@@ -358,6 +377,25 @@ def _ensure_viewer_server() -> None:
 
 def sys_executable() -> str:
     return os.environ.get("UI_PYTHON", "python3")
+
+
+def _launch_godot(out_dir: Path) -> None:
+    """Fire-and-forget: hand off to the existing run_godot_test.sh, which
+    already does sync + asset-import + launch. The UI never talks to Godot
+    or the pipeline directly, only this one script."""
+    global _godot_proc
+    with _lock:
+        if _godot_proc and _godot_proc.poll() is None:
+            raise RuntimeError("Godot zaten açılıyor/açık")
+        GODOT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        log = GODOT_LOG_PATH.open("w", encoding="utf-8")
+        _godot_proc = subprocess.Popen(
+            [str(ROOT / "run_godot_test.sh"), str(out_dir)],
+            cwd=str(ROOT),
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            env=_subprocess_env(),
+        )
 
 
 def _run_pipeline(
@@ -663,6 +701,23 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json(200, {"url": f"http://127.0.0.1:{VIEWER_PORT}/"})
             except Exception as e:
                 self._json(500, {"error": str(e)})
+            return
+
+        if parsed.path == "/api/open_godot":
+            try:
+                payload = json.loads(self._read_body().decode("utf-8") or "{}")
+            except Exception:
+                self._json(400, {"error": "bad json"})
+                return
+            out_dir = Path(payload.get("out", "")).expanduser()
+            if not out_dir.is_dir() or not (out_dir / "robot.json").is_file():
+                self._json(400, {"error": f"run not found: {out_dir}"})
+                return
+            try:
+                _launch_godot(out_dir)
+                self._json(200, {"ok": True})
+            except Exception as e:
+                self._json(409, {"error": str(e)})
             return
 
         self._json(404, {"error": "not found"})
