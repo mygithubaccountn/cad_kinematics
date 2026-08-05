@@ -29,6 +29,7 @@ def is_synthetic_path(path: Path) -> bool:
         or name.endswith(".ir.json")
         or "serial_3dof" in name
         or "scara" in name
+        or "simple_hinge" in name
     )
 
 
@@ -139,6 +140,54 @@ def build_serial_3dof_fixture() -> tuple[AssemblyIR, FeatureGraph]:
     return ir, fg
 
 
+def build_simple_hinge_fixture() -> tuple[AssemblyIR, FeatureGraph]:
+    """
+    Simplest possible case: a frame (fixed) + a door leaf joined by one
+    revolute joint (vertical pin, axis Z) — the "basit menteşe" regression
+    baseline. Exactly one link, one joint, no ambiguity.
+    """
+    specs = [
+        ("frame", "frame", [-0.01, -0.01, 0.0], [0.01, 0.01, 0.10], 0.0002),
+        ("door", "door_leaf", [-0.01, -0.01, 0.0], [0.15, 0.01, 0.10], 0.0004),
+    ]
+    parts: list[PartInstance] = []
+    for pid, name, lo, hi, vol in specs:
+        vmin = list(map(float, lo))
+        vmax = list(map(float, hi))
+        verts, faces = _box_mesh(*vmin, *vmax)
+        parts.append(
+            PartInstance(
+                id=pid,
+                name=name,
+                placement=mat4_to_list(mat4_identity()),
+                volume=vol,
+                bbox=BBox(min_xyz=vmin, max_xyz=vmax),
+                provenance=Provenance(source="synthetic"),
+                mesh_vertices=verts,
+                mesh_faces=faces,
+                shape_ref=pid,
+            )
+        )
+
+    nodes = [AssemblyNode(id=f"n_{p.id}", name=p.name, part_id=p.id) for p in parts]
+    ir = AssemblyIR(
+        source_path="synthetic://simple_hinge",
+        parts=parts,
+        assembly_nodes=nodes,
+        mate_hints=[MateHint(MateKind.CONCENTRIC, "frame", "door", 0.4, "fixture")],
+        unit="metre",
+        meta={"fixture": "simple_hinge"},
+    )
+
+    # Vertical pin: hole in the frame knuckle, matching shaft in the door knuckle.
+    cyls = [
+        CylFeature("c_frame_hole", "frame", [0, 0, 0.05], [0, 0, 1], 0.012, 0.10, CylKind.INNER, ["f0"]),
+        CylFeature("c_door_shaft", "door", [0, 0, 0.05], [0, 0, 1], 0.0115, 0.10, CylKind.OUTER, ["f1"]),
+    ]
+    fg = FeatureGraph(cylinders=cyls, meta={"fixture": "simple_hinge", "prebuilt": True})
+    return ir, fg
+
+
 def load_synthetic_assembly(path: Path) -> AssemblyIR:
     name = path.name.lower()
     if "serial_3dof" in name:
@@ -149,6 +198,10 @@ def load_synthetic_assembly(path: Path) -> AssemblyIR:
         from importer.scara_fixture import build_scara_fixture
 
         ir, _ = build_scara_fixture()
+        ir.source_path = str(path)
+        return ir
+    if "simple_hinge" in name:
+        ir, _ = build_simple_hinge_fixture()
         ir.source_path = str(path)
         return ir
     data = read_json(path)
@@ -168,6 +221,9 @@ def load_prebuilt_features(path: Path) -> FeatureGraph | None:
         from importer.scara_fixture import build_scara_fixture
 
         _, fg = build_scara_fixture()
+        return fg
+    if "simple_hinge" in name or "simple_hinge" in src:
+        _, fg = build_simple_hinge_fixture()
         return fg
     feat = path.with_suffix("").with_suffix(".features.json")
     if feat.is_file():

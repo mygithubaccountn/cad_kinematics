@@ -1,0 +1,5 @@
+{
+    "fixture": "simple_hinge",
+    "description": "Pointer file — pipeline loads built-in synthetic simple-hinge assembly",
+    "note": "Use path ending with simple_hinge.synthetic.json"
+}
