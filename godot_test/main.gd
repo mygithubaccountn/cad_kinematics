@@ -11,19 +11,25 @@ const REVOLUTE_LIMIT := PI          # +-180 deg, generic (robot.json carries no 
 const PRISMATIC_LIMIT := 0.15       # +-15cm, generic
 const REVOLUTE_SPEED := 1.2         # rad/s while key held
 const PRISMATIC_SPEED := 0.08       # m/s while key held
-const ANIMATE_FRACTION := 0.7       # "Test Motion" stays inside 70% of the safe range, never at the hard limit
-const ANIMATE_SPEED := 0.8          # rad/s of the sine driving "Test Motion"
+
+## Test Motion: a pivot-verification sweep, not a stress test. Exactly one
+## joint moves at a time — everything else (including its own descendants,
+## which ride along rigidly, exactly as a real robot would) stays at rest —
+## so there is no cross-joint compounding and nothing to collide with that
+## wasn't already adjacent in the rest pose.
+const ANIMATE_JOINT_DURATION := 2.2  # seconds for one out-and-back sweep
+const ANIMATE_FRACTION := 0.6        # peak sweep, as a fraction of the safe range
 
 var _robot: Node3D
 var _joint_nodes: Array[Node3D] = []
 var _joint_angles: Array[float] = []
 var _selected := 0
 var _tint_on := false
-var _animate_all := false
-var _animate_t := 0.0
 var _overlay_data: Dictionary = {}
-var _hud: Label
-var _motion_btn: Button
+
+var _animate_all := false
+var _animate_joint_idx := 0
+var _animate_local_t := 0.0
 
 var _cam_target := Vector3.ZERO
 var _cam_yaw := -0.7
@@ -31,6 +37,14 @@ var _cam_pitch := 0.5
 var _cam_dist := 1.0
 var _cam_min_dist := 0.05
 var _robot_aabb := AABB()
+
+# --- panel ---
+var _panel_body: VBoxContainer
+var _collapsed := false
+var _info_label: Label
+var _motion_status_label: Label
+var _motion_btn: Button
+var _collapse_btn: Button
 
 
 func _ready() -> void:
@@ -42,7 +56,7 @@ func _ready() -> void:
 	_collect_joints(_robot)
 	_load_overlay_data()
 	_build_debug_overlay()
-	_build_hud()
+	_build_panel()
 	print("Robot yüklendi. Hareketli joint: ", _joint_nodes.size())
 	_fit_camera()
 	_build_ground()
@@ -91,25 +105,46 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key == KEY_TAB:
 		if key_event.shift_pressed:
-			_selected = (_selected - 1 + _joint_nodes.size()) % _joint_nodes.size()
+			_select_prev()
 		else:
-			_selected = (_selected + 1) % _joint_nodes.size()
-		_update_hud()
+			_select_next()
 	elif key == KEY_R:
-		_joint_angles[_selected] = 0.0
-		LOADER_SCRIPT.set_joint(_joint_nodes[_selected], 0.0)
-		_update_hud()
+		_reset_selected()
 	elif key == KEY_SPACE:
-		for i in _joint_nodes.size():
-			_joint_angles[i] = 0.0
-			LOADER_SCRIPT.set_joint(_joint_nodes[i], 0.0)
-		_update_hud()
+		_reset_all()
 	elif key == KEY_C:
-		_tint_on = not _tint_on
-		_apply_tint(_robot, _tint_on)
-		_update_hud()
+		_toggle_tint()
 	elif key == KEY_M:
 		_toggle_animate_all()
+
+
+func _select_next() -> void:
+	_selected = (_selected + 1) % _joint_nodes.size()
+	_update_hud()
+
+
+func _select_prev() -> void:
+	_selected = (_selected - 1 + _joint_nodes.size()) % _joint_nodes.size()
+	_update_hud()
+
+
+func _reset_selected() -> void:
+	_joint_angles[_selected] = 0.0
+	LOADER_SCRIPT.set_joint(_joint_nodes[_selected], 0.0)
+	_update_hud()
+
+
+func _reset_all() -> void:
+	for i in _joint_nodes.size():
+		_joint_angles[i] = 0.0
+		LOADER_SCRIPT.set_joint(_joint_nodes[i], 0.0)
+	_update_hud()
+
+
+func _toggle_tint() -> void:
+	_tint_on = not _tint_on
+	_apply_tint(_robot, _tint_on)
+	_update_hud()
 
 
 func _process(delta: float) -> void:
@@ -117,16 +152,22 @@ func _process(delta: float) -> void:
 		return
 
 	if _animate_all:
-		_animate_t += delta
-		for i in _joint_nodes.size():
-			var n := _joint_nodes[i]
-			var jt := str(n.get_meta("joint_type"))
-			var lim := REVOLUTE_LIMIT if jt == "revolute" else PRISMATIC_LIMIT
-			# Phase-offset per joint so they don't all move in lockstep —
-			# reads more like an exercised mechanism than a single hinge.
-			var phase := i * (TAU / maxf(float(_joint_nodes.size()), 1.0))
-			var val := sin(_animate_t * ANIMATE_SPEED + phase) * lim * ANIMATE_FRACTION
-			LOADER_SCRIPT.set_joint(n, val)
+		_animate_local_t += delta
+		if _animate_local_t >= ANIMATE_JOINT_DURATION:
+			LOADER_SCRIPT.set_joint(_joint_nodes[_animate_joint_idx], 0.0)
+			_animate_local_t = 0.0
+			_animate_joint_idx = (_animate_joint_idx + 1) % _joint_nodes.size()
+			_selected = _animate_joint_idx
+		var n := _joint_nodes[_animate_joint_idx]
+		var jt := str(n.get_meta("joint_type"))
+		var lim := REVOLUTE_LIMIT if jt == "revolute" else PRISMATIC_LIMIT
+		# One smooth hump: 0 -> peak -> 0 across the duration. Never a
+		# discontinuity, never past the same safe fraction manual control
+		# already respects, and only this one joint's subtree is moving.
+		var progress := _animate_local_t / ANIMATE_JOINT_DURATION
+		var val := sin(progress * PI) * lim * ANIMATE_FRACTION
+		LOADER_SCRIPT.set_joint(n, val)
+		_update_hud()
 		return
 
 	var node := _joint_nodes[_selected]
@@ -223,30 +264,103 @@ func _build_debug_overlay() -> void:
 		_robot.add_child(mi)
 
 
-func _build_hud() -> void:
+## Anchored top-right, fixed width, one control per row — stays put and
+## legible at any window size, and collapses to just its header when it's
+## in the way of the viewport.
+func _build_panel() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
-	_hud = Label.new()
-	_hud.position = Vector2(12, 12)
-	_hud.add_theme_font_size_override("font_size", 16)
-	_hud.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-	_hud.add_theme_constant_override("shadow_offset_x", 1)
-	_hud.add_theme_constant_override("shadow_offset_y", 1)
-	layer.add_child(_hud)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_left = -336
+	panel.offset_right = -12
+	panel.offset_top = 12
+	panel.custom_minimum_size = Vector2(324, 0)
+	layer.add_child(panel)
+
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	panel.add_child(outer)
+
+	var header := HBoxContainer.new()
+	outer.add_child(header)
+	var title := Label.new()
+	title.text = "CAD Robot Test"
+	title.add_theme_font_size_override("font_size", 15)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	_collapse_btn = Button.new()
+	_collapse_btn.text = "▾"
+	_collapse_btn.custom_minimum_size = Vector2(28, 28)
+	_collapse_btn.pressed.connect(_toggle_collapsed)
+	header.add_child(_collapse_btn)
+
+	_panel_body = VBoxContainer.new()
+	_panel_body.add_theme_constant_override("separation", 6)
+	outer.add_child(_panel_body)
+
+	_info_label = Label.new()
+	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_panel_body.add_child(_info_label)
+
+	_panel_body.add_child(HSeparator.new())
+
+	_add_row_button("◀ Önceki Joint", _select_prev)
+	_add_row_button("Sonraki Joint ▶", _select_next)
+	_add_row_button("Seçili Joint'i Sıfırla (R)", _reset_selected)
+	_add_row_button("Tümünü Sıfırla (SPACE)", _reset_all)
+	_add_row_button("Renk Overlay Aç/Kapa (C)", _toggle_tint)
+
+	_panel_body.add_child(HSeparator.new())
+
+	_motion_status_label = Label.new()
+	_motion_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_panel_body.add_child(_motion_status_label)
 
 	_motion_btn = Button.new()
-	_motion_btn.text = "Test Motion (Animate All Joints)"
-	_motion_btn.position = Vector2(12, 150)
-	_motion_btn.custom_minimum_size = Vector2(260, 34)
+	_motion_btn.text = "Test Motion Başlat (M)"
+	_motion_btn.custom_minimum_size = Vector2(0, 32)
 	_motion_btn.toggle_mode = true
 	_motion_btn.pressed.connect(_toggle_animate_all)
-	layer.add_child(_motion_btn)
+	_panel_body.add_child(_motion_btn)
+
+	_panel_body.add_child(HSeparator.new())
+
+	var hint := Label.new()
+	hint.text = (
+		"←/→ (A/D basılı tut): seçili joint'i döndür\n"
+		+ "Sağ tık + sürükle: kamerayı döndür\n"
+		+ "Scroll: yakınlaş/uzaklaş"
+	)
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.75, 0.78, 0.82))
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_panel_body.add_child(hint)
+
+
+func _add_row_button(text: String, handler: Callable) -> void:
+	var btn := Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(0, 30)
+	btn.pressed.connect(handler)
+	_panel_body.add_child(btn)
+
+
+func _toggle_collapsed() -> void:
+	_collapsed = not _collapsed
+	_panel_body.visible = not _collapsed
+	_collapse_btn.text = "▸" if _collapsed else "▾"
 
 
 func _toggle_animate_all() -> void:
 	_animate_all = not _animate_all
 	_motion_btn.button_pressed = _animate_all
-	if not _animate_all:
+	_motion_btn.text = "Test Motion Durdur (M)" if _animate_all else "Test Motion Başlat (M)"
+	if _animate_all:
+		_animate_joint_idx = 0
+		_animate_local_t = 0.0
+	else:
 		# Hand back exactly where manual per-joint control left off, not a snap to 0.
 		for i in _joint_nodes.size():
 			LOADER_SCRIPT.set_joint(_joint_nodes[i], _joint_angles[i])
@@ -254,26 +368,28 @@ func _toggle_animate_all() -> void:
 
 
 func _update_hud() -> void:
-	if _hud == null:
+	if _info_label == null:
 		return
 	if _joint_nodes.is_empty():
-		_hud.text = "robot.json içinde hareketli joint yok."
+		_info_label.text = "robot.json içinde hareketli joint yok."
+		_motion_status_label.text = ""
 		return
 	var node := _joint_nodes[_selected]
 	var jtype := str(node.get_meta("joint_type"))
 	var jid := str(node.get_meta("joint_id"))
 	var val := _joint_angles[_selected]
 	var val_str := ("%.1f°" % rad_to_deg(val)) if jtype == "revolute" else ("%.3f m" % val)
-	var motion_line := "Test Motion: AÇIK — tüm joint'ler güvenli aralıkta hareket ediyor (M ile durdur)" if _animate_all \
-		else "Test Motion: kapalı (M veya buton — tüm joint'leri aynı anda salla)"
-	_hud.text = (
-		"Joint %d/%d — %s (%s)  parent→%s\n"
-		+ "Değer: %s\n"
-		+ "%s\n\n"
-		+ "TAB / Shift+TAB: joint seç   ←/→ (A/D basılı tut): döndür\n"
-		+ "R: seçili joint'i sıfırla   SPACE: hepsini sıfırla   C: renk overlay aç/kapa\n"
-		+ "Sağ tık + sürükle: kamerayı döndür   Scroll: yakınlaş/uzaklaş"
-	) % [_selected + 1, _joint_nodes.size(), jid, jtype, str(node.get_parent().name), val_str, motion_line]
+	_info_label.text = (
+		"Joint %d/%d — %s (%s)\nparent → %s\nDeğer: %s"
+	) % [_selected + 1, _joint_nodes.size(), jid, jtype, str(node.get_parent().name), val_str]
+
+	if _animate_all:
+		var active := _joint_nodes[_animate_joint_idx]
+		_motion_status_label.text = "Test ediliyor: %d/%d — %s" % [
+			_animate_joint_idx + 1, _joint_nodes.size(), str(active.get_meta("joint_id"))
+		]
+	else:
+		_motion_status_label.text = "Test Motion: kapalı — her joint'i sırayla, tek başına, güvenli aralıkta sallar"
 
 
 func _runtime_smoke() -> void:
