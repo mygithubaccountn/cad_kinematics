@@ -43,8 +43,10 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 				root.add_child(nodes[link_id])
 			root.set_meta("cad_robot", true)
 			root.set_meta("phase", 0)
+			_apply_up_conversion(root, data)
 			return root
 		push_error("base_link missing: %s" % base_id)
+		_apply_up_conversion(root, data)
 		return root
 
 	root.add_child(nodes[base_id])
@@ -58,6 +60,7 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 		root.set_meta("cad_robot", true)
 		root.set_meta("phase", 0)
 		root.set_meta("frame", str(data.get("frame", "cad_z_up")))
+		_apply_up_conversion(root, data)
 		return root
 
 	# Parent joints: child node placed at origin under parent
@@ -103,13 +106,31 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 
 	root.set_meta("cad_robot", true)
 	root.set_meta("frame", str(data.get("frame", "gltf_y_up")))
+	_apply_up_conversion(root, data)
 	return root
 
 
-## GLB import defaults to a PackedScene (a Node3D + MeshInstance3D subtree),
-## not a bare Mesh — assigning it straight to MeshInstance3D.mesh silently
-## drops it. Instantiate the scene instead; only fall back to a plain
-## MeshInstance3D if a project import preset ever changes this to type Mesh.
+## robot.json is currently always written with frame="cad_z_up" (the
+## pipeline's to_gltf_y_up export flag exists — src/common/frames.py,
+## src/exporter/scene.py — but isn't enabled on the CLI path). Rather than
+## touch the pipeline, apply that exact same, already-defined conversion
+## here as the one place robot.json meets Godot's Y-up engine: rigidly
+## rotate the whole assembled tree, so mesh geometry and joint pivots move
+## together and every relative pivot/axis stays exactly as computed.
+## Matches common/frames.py::cad_z_up_to_gltf_y_up(): (x,y,z) -> (x,z,-y).
+static func _apply_up_conversion(root: Node3D, data: Dictionary) -> void:
+	if str(data.get("frame", "cad_z_up")) != "cad_z_up":
+		return  # already Y-up (pipeline flag enabled) — nothing to do
+	var b := Basis(Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(0, 1, 0))
+	root.transform = Transform3D(b, Vector3.ZERO) * root.transform
+
+
+## GLB import produces a PackedScene (a Node3D/MeshInstance3D subtree), not
+## a bare Mesh. Instantiate it, pull out the actual MeshInstance3D (and its
+## mesh + any per-surface material overrides) and re-parent that directly
+## under the link so the Scene dock shows a real MeshInstance3D per link,
+## not an opaque scene-instance node one has to expand to find. Geometry
+## isn't touched — same Mesh resource, just adopted as a direct child.
 static func _attach_mesh(parent: Node3D, mesh_path: String) -> void:
 	var res: Resource = load(mesh_path)
 	if res == null:
@@ -117,8 +138,22 @@ static func _attach_mesh(parent: Node3D, mesh_path: String) -> void:
 		return
 	if res is PackedScene:
 		var inst := (res as PackedScene).instantiate()
-		inst.name = "Mesh"
-		parent.add_child(inst)
+		var found := _find_mesh_instance(inst)
+		if found != null:
+			var mi := MeshInstance3D.new()
+			mi.name = "Mesh"
+			mi.mesh = _externalize_mesh(found.mesh, mesh_path)
+			mi.transform = _local_transform_relative_to(found, inst)  # relative to the glb root, normally identity
+			for si in range(found.get_surface_override_material_count()):
+				var mat := found.get_surface_override_material(si)
+				if mat != null:
+					mi.set_surface_override_material(si, mat)
+			parent.add_child(mi)
+			inst.free()
+		else:
+			push_warning("No MeshInstance3D found inside %s — attaching raw instance" % mesh_path)
+			inst.name = "Mesh"
+			parent.add_child(inst)
 	elif res is Mesh:
 		var mi := MeshInstance3D.new()
 		mi.name = "Mesh"
@@ -126,6 +161,50 @@ static func _attach_mesh(parent: Node3D, mesh_path: String) -> void:
 		parent.add_child(mi)
 	else:
 		push_warning("Unexpected mesh resource type for %s: %s" % [mesh_path, res])
+
+
+## Compose local (never global_transform — the instantiated glb subtree
+## isn't necessarily inside a live SceneTree yet, so global_transform can't
+## be trusted) transforms from `node` up to `ancestor`.
+static func _local_transform_relative_to(node: Node3D, ancestor: Node) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var cur: Node3D = node
+	while cur != null and cur != ancestor:
+		t = cur.transform * t
+		cur = cur.get_parent() as Node3D
+	return t
+
+
+## The mesh living inside an imported .glb's PackedScene is an anonymous
+## sub-resource of that scene (path like ".../link.glb::ArrayMesh_xxx") —
+## when a *different* scene (RobotScene.tscn) references it directly,
+## Godot's packer can't point to it externally and silently embeds the
+## full geometry inline instead (a single mesh can add hundreds of KB of
+## base64 to the .tscn text). Save it once as its own standalone .tres next
+## to the source .glb so the packer keeps referencing it externally instead.
+static func _externalize_mesh(mesh: Mesh, source_glb_path: String) -> Mesh:
+	if mesh == null:
+		return null
+	var tres_path := source_glb_path.get_basename() + ".mesh.tres"
+	if ResourceLoader.exists(tres_path):
+		var cached: Resource = load(tres_path)
+		if cached is Mesh:
+			return cached
+	var err := ResourceSaver.save(mesh, tres_path)
+	if err != OK:
+		push_warning("Could not externalize mesh to %s (err=%s) — embedding inline" % [tres_path, err])
+		return mesh
+	return load(tres_path)
+
+
+static func _find_mesh_instance(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for c in node.get_children():
+		var found := _find_mesh_instance(c)
+		if found != null:
+			return found
+	return null
 
 
 ## Editor-visible mirror of the joint fields already on the node's meta —

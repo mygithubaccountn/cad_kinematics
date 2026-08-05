@@ -1,13 +1,13 @@
-[gd_scene format=3 uid="uid://4gxjj6akr0fv"]
+[gd_scene format=3]
 
-[ext_resource type="PackedScene" uid="uid://w37udv58fjrr" path="res://robot_data/meshes/link_part_0000.glb" id="1_u36h4"]
-[ext_resource type="Script" uid="uid://bugclijl2sket" path="res://addons/cad_robot_importer/robot_link.gd" id="2_65hnj"]
-[ext_resource type="Script" uid="uid://c0wt0of6ddjd2" path="res://addons/cad_robot_importer/joint_data.gd" id="3_5u52j"]
-[ext_resource type="PackedScene" uid="uid://c3lbu1exjyt38" path="res://robot_data/meshes/link_part_0001.glb" id="4_fubbs"]
-[ext_resource type="PackedScene" uid="uid://bpbjb5ugei6g" path="res://robot_data/meshes/link_part_0002.glb" id="5_1eof6"]
-[ext_resource type="PackedScene" uid="uid://do13h2va2xrvx" path="res://robot_data/meshes/link_part_0003.glb" id="6_205jy"]
-[ext_resource type="PackedScene" uid="uid://dmdkrf7dmlviv" path="res://robot_data/meshes/link_part_0006.glb" id="7_5b7cb"]
-[ext_resource type="PackedScene" uid="uid://0ohw28wcfy4x" path="res://robot_data/meshes/link_part_0004.glb" id="8_ihkdc"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0000.mesh.tres" id="1_u36h4"]
+[ext_resource type="Script" path="res://addons/cad_robot_importer/robot_link.gd" id="2_65hnj"]
+[ext_resource type="Script" path="res://addons/cad_robot_importer/joint_data.gd" id="3_5u52j"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0001.mesh.tres" id="4_fubbs"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0002.mesh.tres" id="5_1eof6"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0003.mesh.tres" id="6_205jy"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0006.mesh.tres" id="7_5b7cb"]
+[ext_resource type="ArrayMesh" path="res://robot_data/meshes/link_part_0004.mesh.tres" id="8_ihkdc"]
 
 [sub_resource type="Resource" id="Resource_hel13"]
 script = ExtResource("3_5u52j")
@@ -54,16 +54,24 @@ pivot = Vector3(0.0036734918, 0.19098125, 0)
 axis = Vector3(-1, 0, 0)
 confidence = 0.6939926501940157
 
-[node name="robot" type="Node3D" unique_id=180741537]
+[sub_resource type="PlaneMesh" id="PlaneMesh_dvxbm"]
+size = Vector2(2.7282763, 2.7282763)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hb0qa"]
+albedo_color = Color(0.24, 0.26, 0.29, 1)
+roughness = 0.9
+
+[node name="robot" type="Node3D" unique_id=2121781679]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
 metadata/cad_robot = true
 metadata/frame = "cad_z_up"
 
-[node name="link_part_0000" type="Node3D" parent="." unique_id=1026363065]
+[node name="link_part_0000" type="Node3D" parent="." unique_id=5412184]
 
-[node name="Mesh" parent="link_part_0000" unique_id=1342311408 instance=ExtResource("1_u36h4")]
-transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.23467588, 0.5307274)
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000" unique_id=803433628]
+mesh = ExtResource("1_u36h4")
 
-[node name="link_part_0001" type="Node3D" parent="link_part_0000" unique_id=121042147]
+[node name="link_part_0001" type="Node3D" parent="link_part_0000" unique_id=1883902813]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.187)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_hel13")
@@ -72,10 +80,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(0, 0, 1)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" parent="link_part_0000/link_part_0001" unique_id=995687359 instance=ExtResource("4_fubbs")]
-transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.049000047, 0.3215129)
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001" unique_id=1366013167]
+mesh = ExtResource("4_fubbs")
 
-[node name="link_part_0002" type="Node3D" parent="link_part_0000/link_part_0001" unique_id=1314019823]
+[node name="link_part_0002" type="Node3D" parent="link_part_0000/link_part_0001" unique_id=2005841966]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0054865447, 0.1, 0.133)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_si5fy")
@@ -84,10 +92,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(1, 0, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=386964944 instance=ExtResource("5_1eof6")]
-transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.028821237, 0.07342148)
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1820903256]
+mesh = ExtResource("5_1eof6")
 
-[node name="link_part_0003" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=2138753695]
+[node name="link_part_0003" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1419452292]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0150058605, 0, 0.25)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_cxfwm")
@@ -96,10 +104,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(1, 0, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=136379535 instance=ExtResource("6_205jy")]
-transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, 0.21940851, -0.20627701)
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=815737307]
+mesh = ExtResource("6_205jy")
 
-[node name="link_part_0006" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=843546511]
+[node name="link_part_0006" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=1509288451]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.020492405, 0.05901875, 0)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_m2j7k")
@@ -108,10 +116,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(0, -1, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1580072962 instance=ExtResource("7_5b7cb")]
-transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, 0.15337867, -0.26487786)
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1985607039]
+mesh = ExtResource("7_5b7cb")
 
-[node name="link_part_0004" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1114149174]
+[node name="link_part_0004" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1698911087]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0036734918, 0.19098125, 0)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_ugndw")
@@ -120,8 +128,18 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(-1, 0, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006/link_part_0004" unique_id=1478015449 instance=ExtResource("8_ihkdc")]
-transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.06029001, -0.45450675)
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006/link_part_0004" unique_id=1010517994]
+mesh = ExtResource("8_ihkdc")
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1576974922]
-transform = Transform3D(-0.9047346, 0, -0.42597568, 0, 1, 0, 0.42597568, 0, -0.9047346, -0.02166617, 0.3756517, -0.5361169)
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1712819546]
+transform = Transform3D(0.76484215, 0.3088544, -0.5653542, 0, 0.8775826, 0.47942546, 0.6442177, -0.36668482, 0.67121214, -0.64268434, 0.86525214, 0.65527165)
+current = true
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1356218875]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.450581e-09, 0, -0.10775)
+mesh = SubResource("PlaneMesh_dvxbm")
+surface_material_override/0 = SubResource("StandardMaterial3D_hb0qa")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=972737024]
+transform = Transform3D(0.70710677, -0.52981293, 0.46829292, 0, 0.6622662, 0.74926865, -0.70710677, -0.52981293, 0.46829292, 0.4547127, 1.0477903, 0.3469627)
+shadow_enabled = true

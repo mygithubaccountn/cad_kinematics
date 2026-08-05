@@ -11,20 +11,26 @@ const REVOLUTE_LIMIT := PI          # +-180 deg, generic (robot.json carries no 
 const PRISMATIC_LIMIT := 0.15       # +-15cm, generic
 const REVOLUTE_SPEED := 1.2         # rad/s while key held
 const PRISMATIC_SPEED := 0.08       # m/s while key held
+const ANIMATE_FRACTION := 0.7       # "Test Motion" stays inside 70% of the safe range, never at the hard limit
+const ANIMATE_SPEED := 0.8          # rad/s of the sine driving "Test Motion"
 
 var _robot: Node3D
 var _joint_nodes: Array[Node3D] = []
 var _joint_angles: Array[float] = []
 var _selected := 0
 var _tint_on := false
+var _animate_all := false
+var _animate_t := 0.0
 var _overlay_data: Dictionary = {}
 var _hud: Label
+var _motion_btn: Button
 
 var _cam_target := Vector3.ZERO
 var _cam_yaw := -0.7
 var _cam_pitch := 0.5
 var _cam_dist := 1.0
 var _cam_min_dist := 0.05
+var _robot_aabb := AABB()
 
 
 func _ready() -> void:
@@ -39,6 +45,7 @@ func _ready() -> void:
 	_build_hud()
 	print("Robot yüklendi. Hareketli joint: ", _joint_nodes.size())
 	_fit_camera()
+	_build_ground()
 	_runtime_smoke()
 	_update_hud()
 
@@ -101,11 +108,27 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_tint_on = not _tint_on
 		_apply_tint(_robot, _tint_on)
 		_update_hud()
+	elif key == KEY_M:
+		_toggle_animate_all()
 
 
 func _process(delta: float) -> void:
 	if _joint_nodes.is_empty():
 		return
+
+	if _animate_all:
+		_animate_t += delta
+		for i in _joint_nodes.size():
+			var n := _joint_nodes[i]
+			var jt := str(n.get_meta("joint_type"))
+			var lim := REVOLUTE_LIMIT if jt == "revolute" else PRISMATIC_LIMIT
+			# Phase-offset per joint so they don't all move in lockstep —
+			# reads more like an exercised mechanism than a single hinge.
+			var phase := i * (TAU / maxf(float(_joint_nodes.size()), 1.0))
+			var val := sin(_animate_t * ANIMATE_SPEED + phase) * lim * ANIMATE_FRACTION
+			LOADER_SCRIPT.set_joint(n, val)
+		return
+
 	var node := _joint_nodes[_selected]
 	var jtype := str(node.get_meta("joint_type"))
 	var limit := REVOLUTE_LIMIT if jtype == "revolute" else PRISMATIC_LIMIT
@@ -211,6 +234,24 @@ func _build_hud() -> void:
 	_hud.add_theme_constant_override("shadow_offset_y", 1)
 	layer.add_child(_hud)
 
+	_motion_btn = Button.new()
+	_motion_btn.text = "Test Motion (Animate All Joints)"
+	_motion_btn.position = Vector2(12, 150)
+	_motion_btn.custom_minimum_size = Vector2(260, 34)
+	_motion_btn.toggle_mode = true
+	_motion_btn.pressed.connect(_toggle_animate_all)
+	layer.add_child(_motion_btn)
+
+
+func _toggle_animate_all() -> void:
+	_animate_all = not _animate_all
+	_motion_btn.button_pressed = _animate_all
+	if not _animate_all:
+		# Hand back exactly where manual per-joint control left off, not a snap to 0.
+		for i in _joint_nodes.size():
+			LOADER_SCRIPT.set_joint(_joint_nodes[i], _joint_angles[i])
+	_update_hud()
+
 
 func _update_hud() -> void:
 	if _hud == null:
@@ -223,13 +264,16 @@ func _update_hud() -> void:
 	var jid := str(node.get_meta("joint_id"))
 	var val := _joint_angles[_selected]
 	var val_str := ("%.1f°" % rad_to_deg(val)) if jtype == "revolute" else ("%.3f m" % val)
+	var motion_line := "Test Motion: AÇIK — tüm joint'ler güvenli aralıkta hareket ediyor (M ile durdur)" if _animate_all \
+		else "Test Motion: kapalı (M veya buton — tüm joint'leri aynı anda salla)"
 	_hud.text = (
 		"Joint %d/%d — %s (%s)  parent→%s\n"
-		+ "Değer: %s\n\n"
+		+ "Değer: %s\n"
+		+ "%s\n\n"
 		+ "TAB / Shift+TAB: joint seç   ←/→ (A/D basılı tut): döndür\n"
 		+ "R: seçili joint'i sıfırla   SPACE: hepsini sıfırla   C: renk overlay aç/kapa\n"
 		+ "Sağ tık + sürükle: kamerayı döndür   Scroll: yakınlaş/uzaklaş"
-	) % [_selected + 1, _joint_nodes.size(), jid, jtype, str(node.get_parent().name), val_str]
+	) % [_selected + 1, _joint_nodes.size(), jid, jtype, str(node.get_parent().name), val_str, motion_line]
 
 
 func _runtime_smoke() -> void:
@@ -256,15 +300,34 @@ func _runtime_smoke() -> void:
 func _fit_camera() -> void:
 	if _robot == null:
 		return
-	var bounds := _collect_aabb(_robot, AABB())
-	var center := bounds.position + bounds.size * 0.5
-	var radius := bounds.size.length() * 0.5
+	_robot_aabb = _collect_aabb(_robot, AABB())
+	var center := _robot_aabb.position + _robot_aabb.size * 0.5
+	var radius := _robot_aabb.size.length() * 0.5
 	if radius <= 0.0:
 		radius = 0.3
 	_cam_target = center
 	_cam_dist = radius * 2.5
 	_cam_min_dist = radius * 0.15
 	_update_camera()
+
+
+func _build_ground() -> void:
+	var center := _robot_aabb.position + _robot_aabb.size * 0.5
+	var radius := _robot_aabb.size.length() * 0.5
+	if radius <= 0.0:
+		radius = 0.3
+	var mi := MeshInstance3D.new()
+	mi.name = "Ground"
+	var plane := PlaneMesh.new()
+	var size := maxf(radius * 6.0, 1.0)
+	plane.size = Vector2(size, size)
+	mi.mesh = plane
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.24, 0.26, 0.29)
+	mat.roughness = 0.9
+	mi.set_surface_override_material(0, mat)
+	mi.position = Vector3(center.x, _robot_aabb.position.y, center.z)
+	add_child(mi)
 
 
 func _collect_aabb(node: Node, acc: AABB) -> AABB:
