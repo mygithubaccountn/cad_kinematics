@@ -1,0 +1,127 @@
+[gd_scene format=3 uid="uid://4gxjj6akr0fv"]
+
+[ext_resource type="PackedScene" uid="uid://w37udv58fjrr" path="res://robot_data/meshes/link_part_0000.glb" id="1_u36h4"]
+[ext_resource type="Script" uid="uid://bugclijl2sket" path="res://addons/cad_robot_importer/robot_link.gd" id="2_65hnj"]
+[ext_resource type="Script" uid="uid://c0wt0of6ddjd2" path="res://addons/cad_robot_importer/joint_data.gd" id="3_5u52j"]
+[ext_resource type="PackedScene" uid="uid://c3lbu1exjyt38" path="res://robot_data/meshes/link_part_0001.glb" id="4_fubbs"]
+[ext_resource type="PackedScene" uid="uid://bpbjb5ugei6g" path="res://robot_data/meshes/link_part_0002.glb" id="5_1eof6"]
+[ext_resource type="PackedScene" uid="uid://do13h2va2xrvx" path="res://robot_data/meshes/link_part_0003.glb" id="6_205jy"]
+[ext_resource type="PackedScene" uid="uid://dmdkrf7dmlviv" path="res://robot_data/meshes/link_part_0006.glb" id="7_5b7cb"]
+[ext_resource type="PackedScene" uid="uid://0ohw28wcfy4x" path="res://robot_data/meshes/link_part_0004.glb" id="8_ihkdc"]
+
+[sub_resource type="Resource" id="Resource_hel13"]
+script = ExtResource("3_5u52j")
+joint_id = "jhyp_0000"
+parent_link = "link_part_0000"
+child_link = "link_part_0001"
+pivot = Vector3(0, 0, 0.187)
+axis = Vector3(0, 0, 1)
+confidence = 0.40001
+
+[sub_resource type="Resource" id="Resource_si5fy"]
+script = ExtResource("3_5u52j")
+joint_id = "jhyp_0002"
+parent_link = "link_part_0001"
+child_link = "link_part_0002"
+pivot = Vector3(0.0054865447, 0.1, 0.133)
+axis = Vector3(1, 0, 0)
+confidence = 0.7816117162748876
+
+[sub_resource type="Resource" id="Resource_cxfwm"]
+script = ExtResource("3_5u52j")
+joint_id = "jhyp_0003"
+parent_link = "link_part_0002"
+child_link = "link_part_0003"
+pivot = Vector3(0.0150058605, 0, 0.25)
+axis = Vector3(1, 0, 0)
+confidence = 0.770457480112349
+
+[sub_resource type="Resource" id="Resource_m2j7k"]
+script = ExtResource("3_5u52j")
+joint_id = "jhyp_0006"
+parent_link = "link_part_0003"
+child_link = "link_part_0006"
+pivot = Vector3(-0.020492405, 0.05901875, 0)
+axis = Vector3(0, -1, 0)
+confidence = 0.4384725
+
+[sub_resource type="Resource" id="Resource_ugndw"]
+script = ExtResource("3_5u52j")
+joint_id = "jhyp_0010"
+parent_link = "link_part_0006"
+child_link = "link_part_0004"
+pivot = Vector3(0.0036734918, 0.19098125, 0)
+axis = Vector3(-1, 0, 0)
+confidence = 0.6939926501940157
+
+[node name="robot" type="Node3D" unique_id=180741537]
+metadata/cad_robot = true
+metadata/frame = "cad_z_up"
+
+[node name="link_part_0000" type="Node3D" parent="." unique_id=1026363065]
+
+[node name="Mesh" parent="link_part_0000" unique_id=1342311408 instance=ExtResource("1_u36h4")]
+transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.23467588, 0.5307274)
+
+[node name="link_part_0001" type="Node3D" parent="link_part_0000" unique_id=121042147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.187)
+script = ExtResource("2_65hnj")
+joint = SubResource("Resource_hel13")
+metadata/joint_id = "jhyp_0000"
+metadata/joint_type = "revolute"
+metadata/joint_axis = Vector3(0, 0, 1)
+metadata/joint_angle = 0.0
+
+[node name="Mesh" parent="link_part_0000/link_part_0001" unique_id=995687359 instance=ExtResource("4_fubbs")]
+transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.049000047, 0.3215129)
+
+[node name="link_part_0002" type="Node3D" parent="link_part_0000/link_part_0001" unique_id=1314019823]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0054865447, 0.1, 0.133)
+script = ExtResource("2_65hnj")
+joint = SubResource("Resource_si5fy")
+metadata/joint_id = "jhyp_0002"
+metadata/joint_type = "revolute"
+metadata/joint_axis = Vector3(1, 0, 0)
+metadata/joint_angle = 0.0
+
+[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=386964944 instance=ExtResource("5_1eof6")]
+transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.028821237, 0.07342148)
+
+[node name="link_part_0003" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=2138753695]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0150058605, 0, 0.25)
+script = ExtResource("2_65hnj")
+joint = SubResource("Resource_cxfwm")
+metadata/joint_id = "jhyp_0003"
+metadata/joint_type = "revolute"
+metadata/joint_axis = Vector3(1, 0, 0)
+metadata/joint_angle = 0.0
+
+[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=136379535 instance=ExtResource("6_205jy")]
+transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, 0.21940851, -0.20627701)
+
+[node name="link_part_0006" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=843546511]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.020492405, 0.05901875, 0)
+script = ExtResource("2_65hnj")
+joint = SubResource("Resource_m2j7k")
+metadata/joint_id = "jhyp_0006"
+metadata/joint_type = "revolute"
+metadata/joint_axis = Vector3(0, -1, 0)
+metadata/joint_angle = 0.0
+
+[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1580072962 instance=ExtResource("7_5b7cb")]
+transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, 0.15337867, -0.26487786)
+
+[node name="link_part_0004" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1114149174]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0036734918, 0.19098125, 0)
+script = ExtResource("2_65hnj")
+joint = SubResource("Resource_ugndw")
+metadata/joint_id = "jhyp_0010"
+metadata/joint_type = "revolute"
+metadata/joint_axis = Vector3(-1, 0, 0)
+metadata/joint_angle = 0.0
+
+[node name="Mesh" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006/link_part_0004" unique_id=1478015449 instance=ExtResource("8_ihkdc")]
+transform = Transform3D(1, 0, 0, 0, -0.11879391, 0.9929189, 0, -0.9929189, -0.11879391, 0, -0.06029001, -0.45450675)
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1576974922]
+transform = Transform3D(-0.9047346, 0, -0.42597568, 0, 1, 0, 0.42597568, 0, -0.9047346, -0.02166617, 0.3756517, -0.5361169)

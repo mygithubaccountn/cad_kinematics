@@ -55,9 +55,18 @@ if [[ -z "$GODOT" ]]; then
 fi
 
 # New/changed .glb files aren't visible to Godot until the asset database
-# imports them — without this pass, parts render invisible on first launch.
+# imports them (also registers new global class_names like JointData) —
+# without this pass, meshes render invisible and generate_scene.gd can't
+# resolve CadRobotLoader/JointData/RobotLink on a cold project.
 echo "Importing new assets..."
 "$GODOT" --headless --editor --path "$ROOT/godot_test" --import --quit >/dev/null 2>&1 || true
 
-echo "Launching Godot: $GODOT"
-exec "$GODOT" --path "$ROOT/godot_test"
+# Turn robot_data/robot.json into a real, saved scene (RobotScene.tscn) —
+# same CadRobotLoader the runtime demo uses, just persisted to disk instead
+# of only existing in memory during Play. This is what makes the robot show
+# up as real, editable nodes in the Editor's Scene dock.
+echo "Building RobotScene.tscn..."
+"$GODOT" --headless --path "$ROOT/godot_test" --script res://tools/generate_scene.gd
+
+echo "Opening Godot Editor: $GODOT"
+exec "$GODOT" --editor --path "$ROOT/godot_test" RobotScene.tscn

@@ -85,12 +85,15 @@ static func build_tree(data: Dictionary, base_dir: String) -> Node3D:
 		parent_n.add_child(child_n)
 		var origin: Array = j.get("origin", [0, 0, 0])
 		child_n.position = Vector3(origin[0], origin[1], origin[2])
-		# Store axis for runtime drivers
+		# Store axis for runtime drivers (main.gd's set_joint reads these)
 		var axis: Array = j.get("axis", [0, 0, 1])
-		child_n.set_meta("joint_id", str(j.get("id", "")))
-		child_n.set_meta("joint_type", str(j.get("type", "revolute")))
+		var jtype := str(j.get("type", "revolute"))
+		var jid := str(j.get("id", ""))
+		child_n.set_meta("joint_id", jid)
+		child_n.set_meta("joint_type", jtype)
 		child_n.set_meta("joint_axis", Vector3(axis[0], axis[1], axis[2]))
 		child_n.set_meta("joint_angle", 0.0)
+		_attach_joint_data(child_n, j, jid, jtype, origin, axis)
 
 	# Attach any remaining orphans under root
 	for link_id in nodes.keys():
@@ -123,6 +126,23 @@ static func _attach_mesh(parent: Node3D, mesh_path: String) -> void:
 		parent.add_child(mi)
 	else:
 		push_warning("Unexpected mesh resource type for %s: %s" % [mesh_path, res])
+
+
+## Editor-visible mirror of the joint fields already on the node's meta —
+## same values, but as a typed Resource so they show as real Inspector
+## fields (Transform/Position is still the thing that actually drives the
+## pivot; this is read-only bookkeeping for a human looking at the scene).
+static func _attach_joint_data(node: Node3D, j: Dictionary, jid: String, jtype: String, origin: Array, axis: Array) -> void:
+	node.set_script(preload("res://addons/cad_robot_importer/robot_link.gd"))
+	var jd := JointData.new()
+	jd.joint_id = jid
+	jd.joint_type = jtype
+	jd.parent_link = str(j.get("parent", ""))
+	jd.child_link = str(j.get("child", ""))
+	jd.pivot = Vector3(origin[0], origin[1], origin[2])
+	jd.axis = Vector3(axis[0], axis[1], axis[2])
+	jd.confidence = float(j.get("confidence", 1.0))
+	node.joint = jd
 
 
 ## Rotate / translate a joint child node. Pipeline already set pivot as node origin.

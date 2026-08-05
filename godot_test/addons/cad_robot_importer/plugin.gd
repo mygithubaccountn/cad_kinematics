@@ -35,4 +35,8 @@ func _on_import() -> void:
 func _set_owner_recursive(node: Node, owner: Node) -> void:
 	for c in node.get_children():
 		c.owner = owner
-		_set_owner_recursive(c, owner)
+		# Don't recurse into an instanced sub-scene's internals (e.g. a GLB
+		# mesh) — its own nodes belong to that sub-scene, not this one;
+		# only the instance root itself needs an owner here.
+		if c.scene_file_path == "":
+			_set_owner_recursive(c, owner)
