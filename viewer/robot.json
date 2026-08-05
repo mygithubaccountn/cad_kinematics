@@ -1,61 +1,169 @@
 {
-  "base_link": "link_door",
+  "base_link": "link_part_0000",
   "frame": "cad_z_up",
   "joints": [
     {
       "axis": [
-        1.0,
         0.0,
-        0.0
+        0.0,
+        1.0
       ],
-      "child": "link_frame",
-      "confidence": 1.0,
+      "child": "link_part_0002",
+      "confidence": 0.98155,
       "id": "jhyp_0000",
       "name": "jhyp_0000",
       "origin": [
-        0.05,
         0.0,
-        0.0
+        0.0,
+        0.07887499999999997
       ],
-      "parent": "link_door",
+      "parent": "link_part_0000",
+      "type": "revolute"
+    },
+    {
+      "axis": [
+        -0.2804086046217908,
+        0.9598807292857069,
+        8.054216659923417e-17
+      ],
+      "child": "link_part_0008",
+      "confidence": 0.76925,
+      "id": "jhyp_0002",
+      "name": "jhyp_0002",
+      "origin": [
+        0.15918908877814894,
+        0.02566776215377238,
+        0.16512499999999997
+      ],
+      "parent": "link_part_0002",
+      "type": "revolute"
+    },
+    {
+      "axis": [
+        0.9497096919670996,
+        0.27743735382463297,
+        0.14518958532395598
+      ],
+      "child": "link_part_0004",
+      "confidence": 0.76925,
+      "id": "jhyp_0003",
+      "name": "jhyp_0003",
+      "origin": [
+        0.21521530636054853,
+        0.11150939953702713,
+        0.08038500095961265
+      ],
+      "parent": "link_part_0003",
+      "type": "revolute"
+    },
+    {
+      "axis": [
+        -0.2804086046217909,
+        0.9598807292857068,
+        2.1202086798248575e-16
+      ],
+      "child": "link_part_0003",
+      "confidence": 0.995275,
+      "id": "jhyp_0004",
+      "name": "jhyp_0004",
+      "origin": [
+        -0.22415067571242145,
+        -0.06411346360432456,
+        0.2610510697518246
+      ],
+      "parent": "link_part_0008",
+      "type": "revolute"
+    },
+    {
+      "axis": [
+        -0.2537584528030627,
+        0.9535625706303954,
+        -0.16225002780815825
+      ],
+      "child": "link_part_0001",
+      "confidence": 0.4082974999999998,
+      "id": "jhyp_0005",
+      "name": "jhyp_0005",
+      "origin": [
+        0.10951144577876032,
+        0.03117862357685415,
+        0.017101055527902087
+      ],
+      "parent": "link_part_0004",
       "type": "revolute"
     }
   ],
   "links": [
     {
-      "id": "link_door",
-      "mesh": "meshes/link_door.glb",
-      "name": "link_door",
+      "id": "link_part_0000",
+      "mesh": "meshes/link_part_0000.glb",
+      "name": "link_part_0000",
       "part_ids": [
-        "door"
+        "part_0000"
       ]
     },
     {
-      "id": "link_frame",
-      "mesh": "meshes/link_frame.glb",
-      "name": "link_frame",
+      "id": "link_part_0001",
+      "mesh": "meshes/link_part_0001.glb",
+      "name": "link_part_0001",
       "part_ids": [
-        "frame"
+        "part_0001",
+        "part_0005",
+        "part_0006",
+        "part_0007",
+        "part_0009"
+      ]
+    },
+    {
+      "id": "link_part_0002",
+      "mesh": "meshes/link_part_0002.glb",
+      "name": "link_part_0002",
+      "part_ids": [
+        "part_0002"
+      ]
+    },
+    {
+      "id": "link_part_0003",
+      "mesh": "meshes/link_part_0003.glb",
+      "name": "link_part_0003",
+      "part_ids": [
+        "part_0003"
+      ]
+    },
+    {
+      "id": "link_part_0004",
+      "mesh": "meshes/link_part_0004.glb",
+      "name": "link_part_0004",
+      "part_ids": [
+        "part_0004"
+      ]
+    },
+    {
+      "id": "link_part_0008",
+      "mesh": "meshes/link_part_0008.glb",
+      "name": "link_part_0008",
+      "part_ids": [
+        "part_0008"
       ]
     }
   ],
   "meta": {
     "kinematic_meta": {
-      "base_part": "door",
+      "base_part": "part_0000",
       "merged_orphans": [],
-      "n_welds": 0,
+      "n_welds": 4,
       "parallel_loops": [],
       "suspicious_orphans": []
     },
     "mesh_quality": "preview",
     "pipeline": "cad-godot-robot-pipeline",
     "placement": "upright_z_up_base_on_ground",
-    "source": "/Users/nisa/Desktop/cad_kinematics/fixtures/simple_hinge.synthetic.json",
+    "source": "/Users/nisa/Desktop/6_AXIS robot arm.step",
     "upright_R": [
       [
+        1.0,
         0.0,
-        0.0,
-        1.0
+        0.0
       ],
       [
         0.0,
@@ -63,21 +171,25 @@
         0.0
       ],
       [
-        -1.0,
         0.0,
-        0.0
+        0.0,
+        1.0
       ]
     ],
     "upright_t": [
-      -0.05,
+      1.1102230246251565e-16,
       0.0,
-      0.15
+      -0.0
     ]
   },
-  "name": "simple_hinge",
+  "name": "robot",
   "rest_pose": {
     "joints": {
-      "jhyp_0000": 0.0
+      "jhyp_0000": 0.0,
+      "jhyp_0002": 0.0,
+      "jhyp_0003": 0.0,
+      "jhyp_0004": 0.0,
+      "jhyp_0005": 0.0
     }
   }
 }
