@@ -61,17 +61,17 @@ size = Vector2(2.7282763, 2.7282763)
 albedo_color = Color(0.24, 0.26, 0.29, 1)
 roughness = 0.9
 
-[node name="robot" type="Node3D" unique_id=2121781679]
+[node name="robot" type="Node3D" unique_id=710137041]
 transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
 metadata/cad_robot = true
 metadata/frame = "cad_z_up"
 
-[node name="link_part_0000" type="Node3D" parent="." unique_id=5412184]
+[node name="link_part_0000" type="Node3D" parent="." unique_id=398860385]
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000" unique_id=803433628]
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000" unique_id=1171208844]
 mesh = ExtResource("1_u36h4")
 
-[node name="link_part_0001" type="Node3D" parent="link_part_0000" unique_id=1883902813]
+[node name="link_part_0001" type="Node3D" parent="link_part_0000" unique_id=2112745241]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.187)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_hel13")
@@ -80,10 +80,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(0, 0, 1)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001" unique_id=1366013167]
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001" unique_id=772633495]
 mesh = ExtResource("4_fubbs")
 
-[node name="link_part_0002" type="Node3D" parent="link_part_0000/link_part_0001" unique_id=2005841966]
+[node name="link_part_0002" type="Node3D" parent="link_part_0000/link_part_0001" unique_id=713119332]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0054865447, 0.1, 0.133)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_si5fy")
@@ -92,10 +92,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(1, 0, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1820903256]
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1564221315]
 mesh = ExtResource("5_1eof6")
 
-[node name="link_part_0003" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1419452292]
+[node name="link_part_0003" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002" unique_id=1956621754]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0150058605, 0, 0.25)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_cxfwm")
@@ -104,10 +104,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(1, 0, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=815737307]
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=74059497]
 mesh = ExtResource("6_205jy")
 
-[node name="link_part_0006" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=1509288451]
+[node name="link_part_0006" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003" unique_id=576938889]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.020492405, 0.05901875, 0)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_m2j7k")
@@ -116,10 +116,10 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(0, -1, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1985607039]
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1284556939]
 mesh = ExtResource("7_5b7cb")
 
-[node name="link_part_0004" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=1698911087]
+[node name="link_part_0004" type="Node3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006" unique_id=160176984]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0036734918, 0.19098125, 0)
 script = ExtResource("2_65hnj")
 joint = SubResource("Resource_ugndw")
@@ -128,18 +128,18 @@ metadata/joint_type = "revolute"
 metadata/joint_axis = Vector3(-1, 0, 0)
 metadata/joint_angle = 0.0
 
-[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006/link_part_0004" unique_id=1010517994]
+[node name="Mesh" type="MeshInstance3D" parent="link_part_0000/link_part_0001/link_part_0002/link_part_0003/link_part_0006/link_part_0004" unique_id=616629131]
 mesh = ExtResource("8_ihkdc")
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1712819546]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1438733742]
 transform = Transform3D(0.76484215, 0.3088544, -0.5653542, 0, 0.8775826, 0.47942546, 0.6442177, -0.36668482, 0.67121214, -0.64268434, 0.86525214, 0.65527165)
 current = true
 
-[node name="Ground" type="MeshInstance3D" parent="." unique_id=1356218875]
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=622231124]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.450581e-09, 0, -0.10775)
 mesh = SubResource("PlaneMesh_dvxbm")
 surface_material_override/0 = SubResource("StandardMaterial3D_hb0qa")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=972737024]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1322121150]
 transform = Transform3D(0.70710677, -0.52981293, 0.46829292, 0, 0.6622662, 0.74926865, -0.70710677, -0.52981293, 0.46829292, 0.4547127, 1.0477903, 0.3469627)
 shadow_enabled = true

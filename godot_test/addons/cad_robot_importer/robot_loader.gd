@@ -186,7 +186,14 @@ static func _externalize_mesh(mesh: Mesh, source_glb_path: String) -> Mesh:
 	if mesh == null:
 		return null
 	var tres_path := source_glb_path.get_basename() + ".mesh.tres"
-	if ResourceLoader.exists(tres_path):
+	# run_godot_test.sh re-syncs every run's GLBs into this same folder under
+	# generic sequential names (link_part_0000.glb, ...) — NOT unique per
+	# robot, just per part-index-within-a-run. So a cache keyed only on
+	# "does a .tres already exist at this path" would silently keep serving
+	# a *previous, different robot's* geometry for that same link index
+	# after a later run overwrote the .glb. Must check the .glb is not
+	# newer than the cache, not just that the cache exists.
+	if ResourceLoader.exists(tres_path) and not _is_stale(source_glb_path, tres_path):
 		var cached: Resource = load(tres_path)
 		if cached is Mesh:
 			return cached
@@ -195,6 +202,14 @@ static func _externalize_mesh(mesh: Mesh, source_glb_path: String) -> Mesh:
 		push_warning("Could not externalize mesh to %s (err=%s) — embedding inline" % [tres_path, err])
 		return mesh
 	return load(tres_path)
+
+
+static func _is_stale(source_path: String, cache_path: String) -> bool:
+	var source_time := FileAccess.get_modified_time(ProjectSettings.globalize_path(source_path))
+	var cache_time := FileAccess.get_modified_time(ProjectSettings.globalize_path(cache_path))
+	if source_time == 0 or cache_time == 0:
+		return true  # couldn't stat one of them — don't trust the cache
+	return source_time > cache_time
 
 
 static func _find_mesh_instance(node: Node) -> MeshInstance3D:
