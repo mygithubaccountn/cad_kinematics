@@ -29,6 +29,15 @@ LOG_PATH = ROOT / "out" / "_ui_run.log"
 
 PORT = int(os.environ.get("UI_PORT", "8787"))
 VIEWER_PORT = int(os.environ.get("VIEWER_PORT", "8765"))
+# Right after a run starts, there's a narrow window where _proc (this
+# process's own subprocess handle) may not be assigned yet — the background
+# thread that does `_proc = subprocess.Popen(...)` hasn't been scheduled —
+# and the child may still be inside run_with_freecad.sh's bash wrapper,
+# before `exec` replaces it with the actual `pipeline.py` process, so pgrep
+# won't find it either. A status poll landing in that window looks exactly
+# like an already-dead orphan. Give a run this long to prove it started
+# before orphan-finalization is allowed to declare it failed.
+STARTUP_GRACE_SECONDS = 10.0
 STAGE_ORDER = ("ingest", "features", "joints", "hierarchy", "package", "meshes", "validate")
 DEFAULT_PROGRESS_STAGES = ("ingest", "features", "joints", "hierarchy", "package", "meshes", "validate")
 
@@ -184,6 +193,9 @@ def _maybe_finalize_orphan(st: dict) -> dict:
     """If pipeline finished while UI was detached, sync viewer and close state."""
     if st.get("status") != "running" or _proc_running():
         return st
+    started_at = st.get("started_at")
+    if started_at and time.time() - started_at < STARTUP_GRACE_SECONDS:
+        return st
     out = st.get("out")
     if not out or _orphan_pipeline_for(out):
         return st
@@ -230,10 +242,15 @@ def _live_status() -> dict:
             if out:
                 st["progress"] = _progress_from_manifest(Path(out))
         else:
-            st = _maybe_finalize_orphan(st)
-            if st.get("status") == "running":
-                st["status"] = "stale"
-                st.setdefault("error", "Süreç kesildi veya UI yeniden başlatıldı")
+            started_at = st.get("started_at")
+            in_startup_grace = bool(
+                started_at and time.time() - started_at < STARTUP_GRACE_SECONDS
+            )
+            if not in_startup_grace:
+                st = _maybe_finalize_orphan(st)
+                if st.get("status") == "running":
+                    st["status"] = "stale"
+                    st.setdefault("error", "Süreç kesildi veya UI yeniden başlatıldı")
     return st
 
 
@@ -471,6 +488,16 @@ def _run_pipeline(
             text=True,
             bufsize=1,
             env=_subprocess_env(),
+            # Heavy STEP imports can run 10+ minutes. Without this, the child
+            # shares this process's session/process group — if the terminal
+            # that launched ui_app.py closes (or this process dies for any
+            # other reason), the OS can SIGHUP/kill the whole group, taking
+            # a nearly-finished import down with it. start_new_session
+            # detaches the child so it survives independently; the existing
+            # orphan-recovery logic (_orphan_pipeline_for / pgrep) already
+            # finds and reconciles with it on the next status poll or UI
+            # restart regardless of session, so nothing else needs to change.
+            start_new_session=True,
         )
         assert _proc.stdout is not None
         for line in _proc.stdout:

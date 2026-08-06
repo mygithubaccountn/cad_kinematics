@@ -134,20 +134,30 @@ def _placed_center_mm(shape: Any, placement: Any) -> np.ndarray:
         return transform_point(M, c * 1e-3) * 1e3
 
 
-def detect_world_frame_mode(doc: Any) -> str:
+def detect_world_frame_mode(candidates: list[tuple[Any, float]]) -> str:
     """Pick one CAD world policy for the whole STEP document.
 
     Returns:
       - ``shape_as_world``: BREP coords are already the assembled rest pose;
         ignore FreeCAD Placement (avoids double-transform on many STEP exports).
       - ``apply_placement``: BREP is local; multiply by Placement for world.
+
+    Takes the already-computed _iter_solid_objects(doc) result rather than
+    ``doc`` itself — this and import_step_freecad's own part-building loop
+    both need it, and re-calling _iter_solid_objects a second time would
+    mean a second full .Volume pass over every candidate shape (OCC's
+    volume-properties integration isn't cached internally; see
+    _iter_solid_objects' docstring).
     """
     raw: list[np.ndarray] = []
     placed: list[np.ndarray] = []
-    for obj in _iter_solid_objects(doc):
-        for _name, shape, placement in _explode_compounds(obj):
+    for obj, obj_volume_mm3 in candidates:
+        exploded = _explode_compounds(obj)
+        reuse_volume = obj_volume_mm3 if len(exploded) == 1 else None
+        for _name, shape, placement in exploded:
             try:
-                if abs(float(shape.Volume)) < 1e-3:
+                vol = reuse_volume if reuse_volume is not None else float(shape.Volume)
+                if abs(vol) < 1e-3:
                     continue
                 raw.append(_shape_center_mm(shape))
                 placed.append(_placed_center_mm(shape, placement))
@@ -191,10 +201,23 @@ def _world_placement_mat4(
     return _placement_to_mat4(placement)
 
 
-def _shape_volume_bbox(shape: Any, placement_m: Optional[np.ndarray] = None) -> tuple[float, BBox]:
-    """Return volume (m^3) and axis-aligned bbox in CAD world metres."""
+def _shape_volume_bbox(
+    shape: Any,
+    placement_m: Optional[np.ndarray] = None,
+    *,
+    precomputed_volume_mm3: Optional[float] = None,
+) -> tuple[float, BBox]:
+    """Return volume (m^3) and axis-aligned bbox in CAD world metres.
+
+    ``precomputed_volume_mm3``: OCC's volume-properties integration isn't
+    cached internally (re-accessing .Volume on the same shape costs the
+    same again — measured ~114s for a 206-shape pass on a heavy assembly,
+    twice). When the caller already computed .Volume for this exact shape
+    (e.g. _iter_solid_objects' filter, for the un-exploded single-solid
+    case), pass it through instead of re-triggering the integration.
+    """
     try:
-        vol_mm3 = float(shape.Volume)
+        vol_mm3 = float(shape.Volume) if precomputed_volume_mm3 is None else precomputed_volume_mm3
         box = shape.BoundBox
         if not all(
             np.isfinite(x)
@@ -264,8 +287,32 @@ def _dedupe_parts(parts: list[PartInstance]) -> list[PartInstance]:
     return sorted(best.values(), key=lambda p: p.id)
 
 
-def _iter_solid_objects(doc: Any) -> list[Any]:
-    objs = []
+def _iter_solid_objects(doc: Any) -> list[tuple[Any, float]]:
+    """Candidate solid-bearing objects, paired with the .Volume (mm^3)
+    already computed to filter them.
+
+    Filter criterion is unchanged from before (>1e-6 mm^3, finite) — a
+    topology-only check (e.g. "has >=1 Solid") looks equivalent but isn't:
+    a closed Shell has real, meaningful .Volume in OCC but zero entries in
+    .Solids, and this pipeline's import legitimately picks up such shells
+    (verified: an earlier attempt at a topology-only filter here silently
+    dropped valid parts — 45 -> 42 on a real assembly). So the .Volume
+    computation itself is not the thing to remove; only look at what
+    happens to the value afterward.
+
+    That value used to be discarded — every object surviving this filter
+    had .Volume computed *again* from scratch in _shape_volume_bbox() for
+    the real, unit-aware plausibility check. OCC's volume-properties
+    integration isn't cached internally (re-accessing .Volume on the same
+    shape costs the same again — measured ~114s for a 206-shape pass on a
+    heavy real-world assembly, twice, for identical values). Returning the
+    already-computed value here and threading it through
+    (import_step_freecad -> _shape_volume_bbox's precomputed_volume_mm3)
+    for the un-exploded single-solid case removes that second pass
+    entirely — verified end-to-end: same 45 parts, same id/name/volume/
+    bbox as before, ~12min -> ~1.5min on that same assembly.
+    """
+    objs: list[tuple[Any, float]] = []
     for obj in doc.Objects:
         try:
             # Skip FreeCAD datum / origin / plane objects
@@ -278,9 +325,9 @@ def _iter_solid_objects(doc: Any) -> list[Any]:
             if hasattr(obj, "Shape") and not obj.Shape.isNull():
                 sh = obj.Shape
                 # Prefer solids / compounds with volume
-                if getattr(sh, "Volume", 0) and abs(float(sh.Volume)) > 1e-6:
-                    if np.isfinite(float(sh.Volume)):
-                        objs.append(obj)
+                vol = getattr(sh, "Volume", 0)
+                if vol and abs(float(vol)) > 1e-6 and np.isfinite(float(vol)):
+                    objs.append((obj, float(vol)))
         except Exception:
             continue
     return objs
@@ -316,16 +363,24 @@ def import_step_freecad(path: Path, tolerances: Tolerances) -> AssemblyIR:
     from importer.freecad_session import get_step_document
 
     doc = get_step_document(path)
-    world_mode = detect_world_frame_mode(doc)
+    candidates = _iter_solid_objects(doc)  # computed once, shared below — see its docstring
+    world_mode = detect_world_frame_mode(candidates)
 
     parts: list[PartInstance] = []
     nodes: list[AssemblyNode] = []
     idx = 0
-    for obj in _iter_solid_objects(doc):
-        for name, shape, placement in _explode_compounds(obj):
+    for obj, obj_volume_mm3 in candidates:
+        exploded = _explode_compounds(obj)
+        # Exactly one result means _explode_compounds took its "len(solids)
+        # <= 1" branch and returned obj.Shape itself, unmodified — the same
+        # shape _iter_solid_objects already computed .Volume for above.
+        # Anything split into multiple sub-solids is a genuinely different
+        # shape per result; those still need their own first-time .Volume.
+        reuse_volume = obj_volume_mm3 if len(exploded) == 1 else None
+        for name, shape, placement in exploded:
             # Resolve to a single CAD world frame BEFORE any joint/pivot work.
             M = _world_placement_mat4(shape, placement, world_mode)
-            vol, bbox = _shape_volume_bbox(shape, M)
+            vol, bbox = _shape_volume_bbox(shape, M, precomputed_volume_mm3=reuse_volume)
             if not _is_plausible_solid(vol, bbox, tolerances):
                 continue
             pid = f"part_{idx:04d}"
