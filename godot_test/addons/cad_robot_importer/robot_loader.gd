@@ -253,6 +253,51 @@ static func _attach_joint_data(node: Node3D, j: Dictionary, jid: String, jtype: 
 	node.joint = jd
 
 
+## A joint's own node is a bare, mesh-less Node3D — it has nothing to click
+## in the 3D viewport, only a row in the Scene dock. That's the actual gap
+## behind "which nodes are editable isn't clear": nothing is *locked*, but
+## half the hierarchy has no visual anchor to click on at all. Read the
+## pipeline's own debug_overlay.json (already computed by `validate`, one
+## pivot marker per joint, already color-coded) and drop a small, always-
+## selectable sphere at each one, parented under robot_root so it picks up
+## the same CAD->Y-up conversion as the links themselves.
+static func build_pivot_markers(robot_root: Node3D, overlay_json_path: String) -> Node3D:
+	var group := Node3D.new()
+	group.name = "PivotMarkers"
+	if not FileAccess.file_exists(overlay_json_path):
+		robot_root.add_child(group)
+		return group
+	var f := FileAccess.open(overlay_json_path, FileAccess.READ)
+	if f == null:
+		robot_root.add_child(group)
+		return group
+	var data = JSON.parse_string(f.get_as_text())
+	if typeof(data) != TYPE_DICTIONARY:
+		robot_root.add_child(group)
+		return group
+
+	for m in data.get("markers", []):
+		var pos: Array = m.get("position", [0, 0, 0])
+		var rgb: Array = m.get("color", [1, 1, 0])
+		var mesh := SphereMesh.new()
+		mesh.radius = float(m.get("radius_m", 0.012)) * 1.6  # a bit larger than the debug dot — this one needs to be clicked
+		mesh.height = mesh.radius * 2.0
+		var mi := MeshInstance3D.new()
+		mi.name = "Pivot_%s" % str(m.get("id", "joint"))
+		mi.mesh = mesh
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(float(rgb[0]), float(rgb[1]), float(rgb[2]))
+		mat.emission_enabled = true
+		mat.emission = mat.albedo_color
+		mat.emission_energy_multiplier = 0.6
+		mi.material_override = mat
+		mi.position = Vector3(pos[0], pos[1], pos[2])
+		group.add_child(mi)
+
+	robot_root.add_child(group)
+	return group
+
+
 ## Rotate / translate a joint child node. Pipeline already set pivot as node origin.
 static func set_joint(node: Node3D, value: float) -> void:
 	if not node.has_meta("joint_type"):

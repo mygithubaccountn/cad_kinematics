@@ -13,6 +13,7 @@ extends SceneTree
 
 const LOADER := preload("res://addons/cad_robot_importer/robot_loader.gd")
 const ROBOT_JSON := "res://robot_data/robot.json"
+const OVERLAY_JSON := "res://robot_data/debug_overlay.json"
 const OUT_SCENE := "res://RobotScene.tscn"
 
 const CAM_YAW := -0.7
@@ -38,6 +39,14 @@ func _initialize() -> void:
 	robot.add_child(_build_camera(center, radius))
 	robot.add_child(_build_ground(center, bottom_y, radius))
 	robot.add_child(_build_light(center, radius))
+
+	# Joint nodes are bare, mesh-less Node3D — nothing to click on in the 3D
+	# viewport. Drop a visible, clickable sphere at each pivot (from the
+	# pipeline's own debug_overlay.json) so every joint has a visual anchor,
+	# not just a Scene-dock row.
+	var robot_root: Node3D = robot.get_node("RobotRoot")
+	if robot_root != null:
+		LOADER.build_pivot_markers(robot_root, OVERLAY_JSON)
 
 	_set_owner_recursive(robot, robot)
 
