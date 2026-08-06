@@ -48,6 +48,14 @@ func _initialize() -> void:
 	if robot_root != null:
 		LOADER.build_pivot_markers(robot_root, OVERLAY_JSON)
 
+	# Attach the same interactive controller main.tscn uses (per-joint
+	# control, Test Motion, tint, orbit camera). It has no @tool
+	# annotation, so it only runs in Play mode — the Editor view stays the
+	# plain, static, saved scene. Its _ready() detects the "RobotRoot"
+	# child already here and uses this exact tree as-is instead of
+	# rebuilding, so Editor edits saved into this file are what Play shows.
+	robot.set_script(preload("res://main.gd"))
+
 	_set_owner_recursive(robot, robot)
 
 	var packed := PackedScene.new()

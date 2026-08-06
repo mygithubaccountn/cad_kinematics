@@ -1,7 +1,21 @@
 extends Node3D
-## Load robot.json, draw pivot/axis debug, let the user manually drive each
-## joint to test pivots (CadRobotLoader contract: this script never computes
-## kinematics, only reads what the pipeline already resolved).
+## Interactive robot test controller — per-joint control, Test Motion,
+## color-overlay tint, orbit camera (CadRobotLoader contract: this script
+## never computes kinematics, only reads what the pipeline already
+## resolved). Attached to the root of *two* different scenes:
+##
+##   - main.tscn: an empty root. _ready() builds the robot fresh from
+##     robot_data/robot.json every time, independent of whatever is saved
+##     in RobotScene.tscn — this stays a trustworthy verification rig
+##     against the pipeline's actual current output.
+##   - RobotScene.tscn: generate_scene.gd already built the full tree
+##     (RobotRoot/links/joints/meshes, Camera3D, Ground, DirectionalLight3D,
+##     PivotMarkers) and attaches this same script to its root. _ready()
+##     detects the pre-built "RobotRoot" child and uses it as-is instead of
+##     rebuilding — so Editor edits saved into RobotScene.tscn are exactly
+##     what Play shows. No @tool: this only runs in Play mode, never while
+##     editing, so the Editor view always stays the plain, static, saved
+##     scene.
 
 const ROBOT_JSON := "res://robot_data/robot.json"
 const OVERLAY_JSON := "res://robot_data/debug_overlay.json"
@@ -49,19 +63,29 @@ var _collapse_btn: Button
 
 
 func _ready() -> void:
-	_robot = LOADER_SCRIPT.load_robot(ROBOT_JSON)
-	if _robot == null:
-		push_error("Robot yüklenemedi: %s" % ROBOT_JSON)
-		return
-	add_child(_robot)
-	_robot_root = _robot.get_node("RobotRoot")
-	_collect_joints(_robot)
+	var existing_root: Node3D = get_node_or_null("RobotRoot")
+	if existing_root != null:
+		# RobotScene.tscn: already built (and possibly hand-edited) by
+		# generate_scene.gd — use it exactly as saved, rebuild nothing.
+		_robot = self
+		_robot_root = existing_root
+	else:
+		# main.tscn: always an independent, fresh rebuild from the
+		# pipeline's own current output.
+		_robot = LOADER_SCRIPT.load_robot(ROBOT_JSON)
+		if _robot == null:
+			push_error("Robot yüklenemedi: %s" % ROBOT_JSON)
+			return
+		add_child(_robot)
+		_robot_root = _robot.get_node("RobotRoot")
+
+	_collect_joints(_robot_root)
 	_load_overlay_data()
 	_build_debug_overlay()
 	_build_panel()
 	print("Robot yüklendi. Hareketli joint: ", _joint_nodes.size())
 	_fit_camera()
-	_build_ground()
+	_build_ground_if_needed()
 	_runtime_smoke()
 	_update_hud()
 
@@ -73,7 +97,7 @@ func _collect_joints(node: Node) -> void:
 			_joint_nodes.append(node as Node3D)
 	for c in node.get_children():
 		_collect_joints(c)
-	if node == _robot:
+	if node == _robot_root:
 		_joint_angles.resize(_joint_nodes.size())
 		_joint_angles.fill(0.0)
 
@@ -145,7 +169,7 @@ func _reset_all() -> void:
 
 func _toggle_tint() -> void:
 	_tint_on = not _tint_on
-	_apply_tint(_robot, _tint_on)
+	_apply_tint(_robot_root, _tint_on)
 	_update_hud()
 
 
@@ -225,30 +249,31 @@ func _tint_mesh_instances(node: Node, mat: StandardMaterial3D) -> void:
 
 
 func _build_debug_overlay() -> void:
-	var debug := Node3D.new()
-	debug.name = "DebugOverlay"
-	add_child(debug)
 	if _overlay_data.is_empty():
 		push_warning("debug_overlay.json yok — pipeline validate çalıştır")
 		return
-	for m in _overlay_data.get("markers", []):
-		var pos: Array = m.get("position", [0, 0, 0])
-		var rgb: Array = m.get("color", [1, 1, 0])
-		var mesh := SphereMesh.new()
-		mesh.radius = float(m.get("radius_m", 0.012))
-		mesh.height = mesh.radius * 2.0
-		var mi := MeshInstance3D.new()
-		mi.mesh = mesh
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(float(rgb[0]), float(rgb[1]), float(rgb[2]))
-		mat.emission_enabled = true
-		mat.emission = mat.albedo_color
-		mat.emission_energy_multiplier = 0.6
-		mi.material_override = mat
-		mi.position = Vector3(pos[0], pos[1], pos[2])
-		# Parent under RobotRoot (not _robot itself) so the CAD Z-up -> Y-up
-		# conversion applies to these raw cad-frame positions too.
-		_robot_root.add_child(mi)
+	# RobotScene.tscn already has its own "PivotMarkers" (generate_scene.gd,
+	# via CadRobotLoader.build_pivot_markers) — same data, same positions.
+	# Don't add a second, overlapping set of spheres on top of them.
+	if not _robot_root.has_node("PivotMarkers"):
+		for m in _overlay_data.get("markers", []):
+			var pos: Array = m.get("position", [0, 0, 0])
+			var rgb: Array = m.get("color", [1, 1, 0])
+			var mesh := SphereMesh.new()
+			mesh.radius = float(m.get("radius_m", 0.012))
+			mesh.height = mesh.radius * 2.0
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = Color(float(rgb[0]), float(rgb[1]), float(rgb[2]))
+			mat.emission_enabled = true
+			mat.emission = mat.albedo_color
+			mat.emission_energy_multiplier = 0.6
+			mi.material_override = mat
+			mi.position = Vector3(pos[0], pos[1], pos[2])
+			# Parent under RobotRoot (not _robot itself) so the CAD Z-up -> Y-up
+			# conversion applies to these raw cad-frame positions too.
+			_robot_root.add_child(mi)
 	for ax in _overlay_data.get("axes", []):
 		var a: Array = ax.get("a", [0, 0, 0])
 		var b: Array = ax.get("b", [0, 0, 1])
@@ -417,9 +442,13 @@ func _runtime_smoke() -> void:
 
 
 func _fit_camera() -> void:
-	if _robot == null:
+	if _robot_root == null:
 		return
-	_robot_aabb = _collect_aabb(_robot, AABB())
+	# From _robot_root, never _robot/self — self can already contain
+	# Camera3D/Ground/DirectionalLight3D as siblings of RobotRoot on
+	# RobotScene.tscn, and the Ground plane alone (deliberately much larger
+	# than the robot) would badly skew the fit if it were ever included.
+	_robot_aabb = _collect_aabb(_robot_root, AABB())
 	var center := _robot_aabb.position + _robot_aabb.size * 0.5
 	var radius := _robot_aabb.size.length() * 0.5
 	if radius <= 0.0:
@@ -430,7 +459,9 @@ func _fit_camera() -> void:
 	_update_camera()
 
 
-func _build_ground() -> void:
+func _build_ground_if_needed() -> void:
+	if has_node("Ground"):
+		return  # RobotScene.tscn already has one (generate_scene.gd)
 	var center := _robot_aabb.position + _robot_aabb.size * 0.5
 	var radius := _robot_aabb.size.length() * 0.5
 	if radius <= 0.0:
