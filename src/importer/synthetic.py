@@ -22,15 +22,31 @@ from common.models import (
 )
 
 
+_SYNTHETIC_JSON_SUFFIXES = (".synthetic.json", ".ir.json")
+_SYNTHETIC_FIXTURE_STEMS = ("serial_3dof", "scara", "simple_hinge")
+_CAD_SUFFIXES = {".step", ".stp", ".igs", ".iges", ".brep", ".brp", ".sldprt", ".sldasm"}
+
+
 def is_synthetic_path(path: Path) -> bool:
+    """
+    True only for an explicit synthetic-fixture input, never for a real CAD file.
+
+    Matches:
+      - *.synthetic.json / *.ir.json (unambiguous, declared fixture format)
+      - a bare fixture name with no CAD extension, e.g. "scara.json" or "scara"
+        (exact stem match -- not a substring match, so a real file legitimately
+        named after a robot type, e.g. "Assieme_scara_eco_foratura.stp", is
+        never misrouted to the synthetic fixture builder)
+
+    Real CAD files (.step/.stp/...) always import through FreeCAD/OCC, regardless
+    of what the filename contains.
+    """
     name = path.name.lower()
-    return (
-        name.endswith(".synthetic.json")
-        or name.endswith(".ir.json")
-        or "serial_3dof" in name
-        or "scara" in name
-        or "simple_hinge" in name
-    )
+    if name.endswith(_SYNTHETIC_JSON_SUFFIXES):
+        return True
+    if path.suffix.lower() in _CAD_SUFFIXES:
+        return False
+    return path.stem.lower() in _SYNTHETIC_FIXTURE_STEMS
 
 
 def _box_mesh(xmin, ymin, zmin, xmax, ymax, zmax) -> tuple[list[list[float]], list[list[int]]]:
@@ -212,19 +228,19 @@ def load_synthetic_assembly(path: Path) -> AssemblyIR:
 
 def load_prebuilt_features(path: Path) -> FeatureGraph | None:
     """Return prebuilt FeatureGraph for known fixtures, else None."""
-    name = path.name.lower()
-    src = str(path)
-    if "serial_3dof" in name or "serial_3dof" in src:
-        _, fg = build_serial_3dof_fixture()
-        return fg
-    if "scara" in name or "scara" in src:
-        from importer.scara_fixture import build_scara_fixture
+    if is_synthetic_path(path):
+        name = path.name.lower()
+        if "serial_3dof" in name:
+            _, fg = build_serial_3dof_fixture()
+            return fg
+        if "scara" in name:
+            from importer.scara_fixture import build_scara_fixture
 
-        _, fg = build_scara_fixture()
-        return fg
-    if "simple_hinge" in name or "simple_hinge" in src:
-        _, fg = build_simple_hinge_fixture()
-        return fg
+            _, fg = build_scara_fixture()
+            return fg
+        if "simple_hinge" in name:
+            _, fg = build_simple_hinge_fixture()
+            return fg
     feat = path.with_suffix("").with_suffix(".features.json")
     if feat.is_file():
         return FeatureGraph.from_dict(read_json(feat))

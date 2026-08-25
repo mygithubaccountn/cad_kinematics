@@ -472,13 +472,27 @@ def select_joints(
 
     volumes = {p.id: p.volume for p in ir.parts} if ir else {}
 
+    # Cap the absolute link-volume floor at a fraction of this assembly's largest
+    # part. min() means the cap only ever loosens the filter, and only for
+    # assemblies smaller than min_link_volume_m3 itself (large robots: no-op).
+    max_part_volume = max(volumes.values()) if volumes else 0.0
+    link_volume_floor = tol.min_link_volume_m3
+    if max_part_volume > 0:
+        link_volume_floor = min(
+            tol.min_link_volume_m3, tol.min_link_volume_relative_frac * max_part_volume
+        )
+    scale_relaxed = link_volume_floor < tol.min_link_volume_m3
+
     def ok_volume(pid: str, conf: float) -> bool:
         if not volumes:
             return True
         v = volumes.get(pid, 0.0)
-        if v >= tol.min_link_volume_m3:
+        if v >= link_volume_floor:
             return True
-        return conf >= 0.65 and v >= 0.25 * tol.min_link_volume_m3
+        if conf >= 0.65 and v >= 0.25 * link_volume_floor:
+            return True
+        # Small-robot only: very strong evidence outweighs the size floor.
+        return scale_relaxed and conf >= tol.volume_bypass_min_confidence and v >= tol.min_part_volume_m3
 
     movable = [
         h

@@ -59,6 +59,15 @@ class Tolerances:
     max_bbox_extent_m: float = 50.0  # reject unbounded construction geometry
     # Parts below this are welded to nearest neighbor (screws, tiny jaws) — not jointed
     min_link_volume_m3: float = 2.0e-4
+    # Small-robot correction: the link-volume floor is capped at this fraction of the
+    # assembly's largest part, so a robot entirely smaller than min_link_volume_m3
+    # (e.g. a ~9g SCARA gripper) doesn't have every real link treated as a fastener.
+    # min() with min_link_volume_m3 means large assemblies are unaffected.
+    min_link_volume_relative_frac: float = 0.02
+    # Small-robot correction: a joint whose evidence is this strong is trusted as a
+    # real mechanism link over the volume floor (only checked below min_link_volume_m3,
+    # i.e. only once the relative cap above has already kicked in).
+    volume_bypass_min_confidence: float = 0.9
     # Refuse fixed welds between parts whose centers are farther than this (metres)
     max_weld_distance_m: float = 0.12
     # Orphan attach: require evidence; merge into host link if strong
